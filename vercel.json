@@ -6,29 +6,23 @@
   "outputDirectory": "dist",
   "headers": [
     {
-      "source": "/",
+      "source": "/(.*)",
       "headers": [
         {
           "key": "Cache-Control",
-          "value": "no-store, max-age=0, must-revalidate"
-        }
-      ]
-    },
-    {
-      "source": "/index.html",
-      "headers": [
+          "value": "no-store, no-cache, max-age=0, must-revalidate"
+        },
         {
-          "key": "Cache-Control",
-          "value": "no-store, max-age=0, must-revalidate"
-        }
-      ]
-    },
-    {
-      "source": "/api/:path*",
-      "headers": [
+          "key": "Pragma",
+          "value": "no-cache"
+        },
         {
-          "key": "Cache-Control",
-          "value": "no-store, max-age=0, must-revalidate"
+          "key": "Expires",
+          "value": "0"
+        },
+        {
+          "key": "X-Sea-Build",
+          "value": "v7.4.1-deploy-visible-fix"
         }
       ]
     }

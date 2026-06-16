@@ -1,33 +1,19 @@
-# Sea Trading OS v7.4 — Visual Upgrade
+# Sea Trading OS v7.4.1 — Deploy Visible Fix
 
-**Build:** v7.4 visual upgrade · 2026-06-17
-**Previous:** v7.3 compact layout
+Build marker: `SEA TRADING OS v7.4.1 · deploy visible fix`
 
-## v7.4 改动摘要 / What Changed
+## 修复点
+- 修正 `index.html` 残留旧版本标识：原来 meta 还是 v7.1、title 还是 v7.3.2。
+- 修正 `package.json` description 残留 v7.2 文案。
+- 全站加入 no-store headers，避免 Vercel/浏览器继续显示旧入口。
+- 保留 v7.4 visual upgrade 页面内容。
+- 压缩包采用“根目录平铺结构”，上传 GitHub 时不会多套一层 `sea-trading-os-v7.4/` 文件夹。
 
-### 视觉层级全面升级
-| 元素 | v7.3 | v7.4 |
-|------|------|------|
-| Ticker 价格字体 | 17px | **22px 加粗** |
-| GEX 关键价位 | 14px | **20px 加粗** |
-| Checklist 条目 | 10px | **11px 行高1.5** |
-| 进度条厚度 | 1px | **4px** |
-| 进度数字 | 10px文字 | **18px 大数字** |
-| KZ 时间字体 | 10px | **16px 加粗** |
-| 铁律文字 | 9px | **11px** |
-| Step Rail 标题 | 10px | **12px 加粗** |
+## 部署验证
+部署后页面底部应显示：
 
-### 新增功能
-- **VixBadge** — 顶栏实时显示 LOW VOL / NORMAL / ELEVATED / EXTREME
-- **GEX 颜色区分** — Flip(teal) / Call Wall(red) / Put Wall(green) / Vol Trigger(amber)
-- **GEX 模式 Badge** — 正/负GEX 展示更醒目
-
-## 架构
-React 18 + Vite + Tailwind CSS · Vercel Serverless
-
-## 部署
-```bash
-npm install
-npm run dev     # 本地
-vercel          # 生产
+```txt
+SEA TRADING OS v7.4.1 · deploy visible fix · visual upgrade
 ```
+
+如果仍显示旧版，说明 GitHub/Vercel 部署的不是这次提交，或上传时没有覆盖仓库根目录。
