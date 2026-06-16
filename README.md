@@ -59,3 +59,9 @@ vercel --prod
 - Hardened .npmrc for public registry, no audit/fund/progress, and longer fetch retries.
 
 Expected Vercel flow: npm install -> npm run build -> dist output.
+
+
+## v7.3 Compact Layout
+- Removed Quick Ref · $1,000 Account block.
+- Compressed Gold XAU layout into a compact two-column execution board.
+- Reduced checklist/rule spacing for one-screen visibility.

@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from "react";
 function ls(k,d){try{var v=localStorage.getItem(k);return v!==null?v:d}catch(e){return d}}
 function lsSet(k,v){try{localStorage.setItem(k,v)}catch(e){}}
 const TODAY=new Date().toDateString();
-const BUILD_ID="v7.1 fixed · 2026-06-16";
+const BUILD_ID="v7.3 compact layout · 2026-06-16";
 
 const PRE_ZH=[
   {t:"今日有无重大数据（FOMC/CPI/NFP）发布？",w:"有 → 降低预期或跳过当天"},
@@ -247,13 +247,13 @@ function VixZones({vix}){
 
 function CheckItem({text,warn,checked,onClick}){
   return(
-    <div onClick={onClick} style={{display:"flex",alignItems:"flex-start",gap:9,padding:"8px 12px",borderBottom:"1px solid var(--bd)",cursor:"pointer",background:checked?"color-mix(in srgb,var(--teal) 5%,transparent)":"transparent"}}>
+    <div onClick={onClick} style={{display:"flex",alignItems:"flex-start",gap:7,padding:"5px 9px",borderBottom:"1px solid var(--bd)",cursor:"pointer",background:checked?"color-mix(in srgb,var(--teal) 5%,transparent)":"transparent"}}>
       <div style={{width:16,height:16,borderRadius:3,border:`1.5px solid ${checked?"var(--teal)":"var(--bd2)"}`,background:checked?"var(--teal)":"transparent",flexShrink:0,marginTop:1,display:"flex",alignItems:"center",justifyContent:"center"}}>
         {checked&&<svg width="9" height="9" viewBox="0 0 12 10" fill="none" stroke="var(--bg)" strokeWidth="2.5"><polyline points="1,5 4.5,9 11,1"/></svg>}
       </div>
       <div>
-        <div style={{fontSize:11,lineHeight:1.5,color:checked?"var(--t2)":"var(--t1)",textDecoration:checked?"line-through":"none",textDecorationColor:"var(--bd2)"}}>{text}</div>
-        {warn&&<div style={{fontSize:10,color:"var(--amber)",marginTop:2}}>{warn}</div>}
+        <div style={{fontSize:10,lineHeight:1.35,color:checked?"var(--t2)":"var(--t1)",textDecoration:checked?"line-through":"none",textDecorationColor:"var(--bd2)"}}>{text}</div>
+        {warn&&<div style={{fontSize:9,color:"var(--amber)",marginTop:1}}>{warn}</div>}
       </div>
     </div>
   );
@@ -267,31 +267,31 @@ function Checklist({items,checks,onToggle,countId,label,readyText}){
   return(
     <div>
       <div style={{background:"var(--bg3)",border:"1px solid var(--bd)",borderRadius:8,overflow:"hidden"}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"9px 12px",borderBottom:"1px solid var(--bd)"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 9px",borderBottom:"1px solid var(--bd)"}}>
           <div style={{fontSize:10,fontWeight:700,letterSpacing:".1em",textTransform:"uppercase",color:"var(--t1)"}}>{label}</div>
           <div style={{fontSize:10,color:"var(--t2)"}}>{count}/{total}</div>
         </div>
-        <div style={{height:2,background:"var(--bd)"}}><div style={{height:"100%",width:`${pct}%`,background:barColor,transition:"width .3s,background .3s"}}/></div>
+        <div style={{height:1,background:"var(--bd)"}}><div style={{height:"100%",width:`${pct}%`,background:barColor,transition:"width .3s,background .3s"}}/></div>
         {items.map((item,i)=>{
           const text=typeof item==="string"?item:item.t;
           const warn=typeof item==="object"?item.w:null;
           return <CheckItem key={i} text={text} warn={warn} checked={!!checks[i]} onClick={()=>onToggle(i)}/>;
         })}
       </div>
-      {count===total&&<div style={{marginTop:7,borderRadius:6,padding:"8px 12px",textAlign:"center",fontSize:11,fontWeight:700,letterSpacing:".08em",background:"color-mix(in srgb,var(--green) 12%,transparent)",border:"1px solid color-mix(in srgb,var(--green) 35%,transparent)",color:"var(--green)"}}>{readyText}</div>}
+      {count===total&&<div style={{marginTop:5,borderRadius:6,padding:"6px 10px",textAlign:"center",fontSize:11,fontWeight:700,letterSpacing:".08em",background:"color-mix(in srgb,var(--green) 12%,transparent)",border:"1px solid color-mix(in srgb,var(--green) 35%,transparent)",color:"var(--green)"}}>{readyText}</div>}
     </div>
   );
 }
 
 function Rules({items,hotIdx=[]}){
   return(
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:5}}>
       {items.map((r,i)=>{
         const hot=hotIdx.includes(i);
         return(
-          <div key={i} style={{background:"var(--bg3)",border:`1px solid ${hot?"color-mix(in srgb,var(--red) 30%,transparent)":"var(--bd)"}`,borderRadius:5,padding:"7px 10px",display:"flex",gap:7,alignItems:"flex-start"}}>
+          <div key={i} style={{background:"var(--bg3)",border:`1px solid ${hot?"color-mix(in srgb,var(--red) 30%,transparent)":"var(--bd)"}`,borderRadius:5,padding:"5px 8px",display:"flex",gap:6,alignItems:"flex-start"}}>
             <div style={{width:18,height:18,borderRadius:3,background:hot?"color-mix(in srgb,var(--red) 20%,transparent)":"var(--bg4)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,fontWeight:700,color:hot?"var(--red)":"var(--t3)",flexShrink:0}}>{i+1}</div>
-            <div style={{fontSize:10,lineHeight:1.5,color:hot?"var(--red)":"var(--t1)",fontWeight:hot?700:400}}>{r}</div>
+            <div style={{fontSize:9,lineHeight:1.35,color:hot?"var(--red)":"var(--t1)",fontWeight:hot?700:400}}>{r}</div>
           </div>
         );
       })}
@@ -303,10 +303,10 @@ function StepRail({steps,color="var(--teal)"}){
   return(
     <div style={{display:"flex",gap:0,overflow:"hidden",borderRadius:6,border:"1px solid var(--bd)"}}>
       {steps.map((s,i)=>(
-        <div key={i} style={{flex:1,padding:"8px 10px",background:"var(--bg3)",borderRight:i<steps.length-1?"1px solid var(--bd)":"none"}}>
+        <div key={i} style={{flex:1,padding:"6px 8px",background:"var(--bg3)",borderRight:i<steps.length-1?"1px solid var(--bd)":"none"}}>
           <div style={{fontSize:8,letterSpacing:".12em",color,fontWeight:700,textTransform:"uppercase",marginBottom:3}}>{s.n}</div>
           <div style={{fontSize:10,fontWeight:700,color:"var(--t1)",marginBottom:2}}>{s.t}</div>
-          <div style={{fontSize:9,color:"var(--t2)",lineHeight:1.5}}>{s.d}</div>
+          <div style={{fontSize:9,color:"var(--t2)",lineHeight:1.35}}>{s.d}</div>
         </div>
       ))}
     </div>
@@ -317,18 +317,18 @@ function KZGrid({zones}){
   return(
     <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:6}}>
       {zones.map((z,i)=>(
-        <div key={i} style={{borderRadius:6,padding:"8px 10px",border:`1px solid color-mix(in srgb,${z.c} 35%,transparent)`,background:`color-mix(in srgb,${z.c} 7%,transparent)`}}>
+        <div key={i} style={{borderRadius:6,padding:"6px 8px",border:`1px solid color-mix(in srgb,${z.c} 35%,transparent)`,background:`color-mix(in srgb,${z.c} 7%,transparent)`}}>
           <div style={{fontSize:10,fontWeight:700,color:z.c,marginBottom:3}}>{z.title}</div>
           <div style={{fontSize:10,fontWeight:700,fontFamily:"monospace",marginBottom:3}}>{z.time}</div>
-          <div style={{fontSize:10,color:"var(--t2)",lineHeight:1.5}}>{z.note}</div>
+          <div style={{fontSize:9,color:"var(--t2)",lineHeight:1.35}}>{z.note}</div>
         </div>
       ))}
     </div>
   );
 }
 
-function SL({children}){return <div style={{fontSize:9,letterSpacing:".2em",color:"var(--t3)",fontWeight:700,textTransform:"uppercase",marginBottom:5}}>{children}</div>;}
-function Divider(){return <div style={{height:1,background:"var(--bd)",margin:"2px 0"}}/>;}
+function SL({children}){return <div style={{fontSize:9,letterSpacing:".18em",color:"var(--t3)",fontWeight:700,textTransform:"uppercase",marginBottom:4}}>{children}</div>;}
+function Divider(){return <div style={{height:1,background:"var(--bd)",margin:"1px 0"}}/>;}
 function Ibtn({children,onClick,active}){return <button onClick={onClick} style={{background:active?"color-mix(in srgb,var(--teal) 15%,transparent)":"transparent",border:`1px solid ${active?"var(--teal)":"var(--bd2)"}`,color:active?"var(--teal)":"var(--t2)",borderRadius:6,padding:"4px 10px",fontSize:10,cursor:"pointer",fontFamily:"inherit",letterSpacing:".08em"}}>{children}</button>;}
 function Rbtn({children,onClick}){return <button onClick={onClick} style={{background:"transparent",border:"1px solid var(--bd)",color:"var(--t3)",borderRadius:4,padding:"2px 7px",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>{children}</button>;}
 
@@ -359,7 +359,7 @@ function GEXPanel({zh,gex,onSave,isToday}){
   return(
     <div>
       <SL>{zh?"GEX 每日设置（必填）":"GEX Daily Setup (required)"}</SL>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:6}}>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:5,marginBottom:6}}>
         {[{s:"positive",label:zh?"正 GEX · 震荡模式":"Positive GEX · Range",sub:zh?"偏区间 · 少追突破 · 等回踩":"Range bias · avoid chasing · wait pullback",c:"var(--blue)"},{s:"negative",label:zh?"负 GEX · 趋势模式":"Negative GEX · Trend",sub:zh?"偏顺势 · 等破位 · VWAP第一参考":"Trend bias · wait break · VWAP = regime line",c:"var(--amber)"}].map(b=>(
           <button key={b.s} onClick={()=>setG(b.s)} style={{border:`1px solid ${local.state===b.s?b.c+"88":"var(--bd2)"}`,borderRadius:6,padding:"9px 11px",background:local.state===b.s?`color-mix(in srgb,${b.c} 10%,transparent)`:"var(--bg3)",textAlign:"left",cursor:"pointer",fontFamily:"inherit"}}>
             <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:".1em",color:b.c,marginBottom:2}}>{b.label}</div>
@@ -461,7 +461,7 @@ export default function App(){
         ))}
       </div>
 
-      <div style={{background:"var(--bg2)",padding:"12px 14px",display:"flex",flexDirection:"column",gap:10}}>
+      <div style={{background:"var(--bg2)",padding:"9px 12px",display:"flex",flexDirection:"column",gap:6}}>
 
         {tab===0&&<>
           <GEXPanel zh={zh} gex={gex} onSave={handleSaveGex} isToday={gexIsToday}/>
@@ -480,18 +480,6 @@ export default function App(){
               <Rbtn onClick={day.reset}>{t("重置","Reset")}</Rbtn>
             </div>
             <Checklist items={zh?DAY_ZH:DAY_EN} checks={day.c} onToggle={day.toggle} label={t("入场条件","Entry Conditions")} readyText={t("✓ 全部确认 · 可以入场","✓ All confirmed · Ready to enter")}/>
-          </div>
-          <Divider/>
-          <div>
-            <SL>{t("快速参考 · $1,000账户","Quick Ref · $1,000 Account")}</SL>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6}}>
-              {[{l:t("每笔止损","Per-Trade Stop"),v:"−$20",c:"var(--red)"},{l:t("每笔目标","Per-Trade Target"),v:"+$40",c:"var(--green)"},{l:t("日亏熔断","Daily Limit"),v:"−$50",c:"var(--red)"},{l:t("时间止盈","Time Stop"),v:"45 min",c:"var(--amber)"}].map(item=>(
-                <div key={item.l} style={{background:"var(--bg3)",border:"1px solid var(--bd)",borderRadius:6,padding:"8px 10px"}}>
-                  <div style={{fontSize:9,textTransform:"uppercase",letterSpacing:".1em",color:"var(--t3)",fontWeight:700,marginBottom:3}}>{item.l}</div>
-                  <div style={{fontSize:14,fontWeight:700,fontFamily:"monospace",color:item.c}}>{item.v}</div>
-                </div>
-              ))}
-            </div>
           </div>
           <Divider/>
           <div>
@@ -536,42 +524,44 @@ export default function App(){
 
         {tab===2&&<>
           <div>
-            <SL>{t("黄金 XAU/USD · 三层对齐系统","Gold XAU/USD · Three-Layer System")}</SL>
-            <div style={{background:`color-mix(in srgb,var(--amber) 8%,transparent)`,border:`1px solid color-mix(in srgb,var(--amber) 30%,transparent)`,borderRadius:6,padding:"9px 11px",fontSize:10,color:"var(--t2)",lineHeight:1.6,marginBottom:8}}>
-              {t("宏观驱动决定方向 · SMC结构决定位置 · Kill Zone决定时间 · 三层全对齐才出手","Macro drives direction · SMC structure determines level · Kill Zone determines timing · all three must align")}
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:4}}>
+              <SL>{t("黄金 XAU/USD · 紧凑执行系统","Gold XAU/USD · Compact Execution System")}</SL>
+              <span style={{fontSize:9,color:"var(--amber)",letterSpacing:".08em",fontWeight:700}}>{t("宏观→结构→时间→确认","Macro→Structure→Time→Confirm")}</span>
             </div>
-            <StepRail color="var(--amber)" steps={[{n:"日线",t:t("定向","Direction"),d:t("宏观驱动方向 + 主结构OB + 流动性格局","Macro driver direction + major OB + liquidity landscape")},{n:"4H/1H",t:t("找位","Find Level"),d:t("BSL/SSL流动性 + FVG + POC集中区 + 结构重叠","BSL/SSL liquidity + FVG + POC cluster + structural overlap")},{n:"15M/5M",t:t("确认","Confirm"),d:t("等收回/拒绝/CHoCH·BOS，不在测试区抢跑","Wait for reclaim/rejection/CHoCH·BOS — no front-running")},{n:t("执行","Execute"),t:t("只拿中间段","Middle Leg Only"),d:t("止损放结构外 · 信号不完整直接放弃","Stop outside structure · incomplete signal = abandon")}]}/>
+            <StepRail color="var(--amber)" steps={[{n:"D/4H",t:t("定向+找位","Bias + Level"),d:t("DXY/实际利率 + OB/FVG/POC重叠","DXY/real rates + OB/FVG/POC confluence")},{n:"KZ",t:t("只等窗口","Only Window"),d:t("伦敦15–17 / 纽约21:30–23:30","London 15–17 / NY 21:30–23:30 BJ")},{n:"5M/15M",t:t("确认入场","Confirm"),d:t("CHoCH/BOS + 拒绝 + 收回结构","CHoCH/BOS + rejection + reclaim")},{n:t("风控","Risk"),t:t("只拿中段","Middle Leg"),d:t("止损结构外 · RR≥1:2","Stop outside · RR≥1:2")}]}/>
           </div>
-          <Divider/>
-          <div>
-            <SL>{t("宏观过滤 · DXY + 实际利率","Macro Filter · DXY + Real Rates")}</SL>
-            <div style={{display:"flex",flexDirection:"column",gap:4}}>
-              {(zh?MACRO_GOLD_ZH:MACRO_GOLD_EN).map((item,i)=>{
-                const col={green:"var(--green)",blue:"var(--blue)",slate:"var(--t3)",amber:"var(--amber)",red:"var(--red)"}[item.c];
-                return(
-                  <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 9px",borderRadius:5,border:`1px solid ${i===4?"color-mix(in srgb,var(--red) 25%,transparent)":"var(--bd)"}`,background:i===4?"color-mix(in srgb,var(--red) 6%,transparent)":"var(--bg3)"}}>
-                    <div style={{fontSize:10,fontWeight:700,flex:1,color:col}}>{item.s}</div>
-                    <div style={{fontSize:9,color:"var(--t2)"}}>{item.a}</div>
-                  </div>
-                );
-              })}
+
+          <div style={{display:"grid",gridTemplateColumns:"1.05fr .95fr",gap:6,alignItems:"start"}}>
+            <div>
+              <SL>{t("宏观过滤 · DXY + 实际利率","Macro Filter · DXY + Real Rates")}</SL>
+              <div style={{display:"flex",flexDirection:"column",gap:3}}>
+                {(zh?MACRO_GOLD_ZH:MACRO_GOLD_EN).map((item,i)=>{
+                  const col={green:"var(--green)",blue:"var(--blue)",slate:"var(--t3)",amber:"var(--amber)",red:"var(--red)"}[item.c];
+                  return(
+                    <div key={i} style={{display:"flex",alignItems:"center",gap:6,padding:"4px 7px",borderRadius:5,border:`1px solid ${i===4?"color-mix(in srgb,var(--red) 25%,transparent)":"var(--bd)"}`,background:i===4?"color-mix(in srgb,var(--red) 6%,transparent)":"var(--bg3)"}}>
+                      <div style={{fontSize:9,fontWeight:700,flex:1,color:col}}>{item.s}</div>
+                      <div style={{fontSize:8,color:"var(--t2)",textAlign:"right"}}>{item.a}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <div>
+              <SL>{t("Kill Zone 时间窗口","Kill Zones")}</SL>
+              <KZGrid zones={[{title:t("伦敦","London"),time:"15:00–17:00",note:t("扫亚洲高低 · 定日内方向","Sweep Asia · set direction"),c:"var(--amber)"},{title:t("纽约","New York"),time:"21:30–23:30",note:t("扫伦敦后走主段","Sweep London · main leg"),c:"var(--blue)"},{title:t("禁区","Banned"),time:t("亚盘中间位","Asian Mid"),note:t("不追 · 数据瞬间不进","No chase · no data spike"),c:"var(--red)"}]}/>
             </div>
           </div>
-          <Divider/>
-          <div>
-            <SL>{t("Kill Zone 时间窗口 (北京时间)","Kill Zones (Beijing Time)")}</SL>
-            <KZGrid zones={[{title:t("伦敦 Kill Zone","London Kill Zone"),time:"15:00–17:00",note:t("扫亚洲盘高低点 · 常设定当日方向","Sweeps Asian highs/lows · often sets day direction"),c:"var(--amber)"},{title:t("纽约 Kill Zone","New York Kill Zone"),time:"21:30–23:30",note:t("扫伦敦高低后定方向 · 主要走势段","Sweeps London levels then sets direction"),c:"var(--blue)"},{title:t("禁区","Banned Zone"),time:t("亚盘中间位","Asian Midrange"),note:t("不追亚洲盘中间位 · FOMC/CPI发布瞬间不进","No Asian midrange chase · no entry at FOMC/CPI release"),c:"var(--red)"}]}/>
-          </div>
-          <Divider/>
-          <div>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5}}>
-              <SL>{t("黄金入场清单","Gold Entry Checklist")}</SL>
-              <Rbtn onClick={gold.reset}>{t("重置","Reset")}</Rbtn>
+
+          <div style={{display:"grid",gridTemplateColumns:"1.25fr .75fr",gap:6,alignItems:"start"}}>
+            <div>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
+                <SL>{t("黄金入场清单","Gold Entry Checklist")}</SL>
+                <Rbtn onClick={gold.reset}>{t("重置","Reset")}</Rbtn>
+              </div>
+              <Checklist items={zh?GC_ZH:GC_EN} checks={gold.c} onToggle={gold.toggle} label={t("三层对齐确认","Three-Layer Alignment")} readyText={t("✓ 三层对齐 · 可以入场","✓ Three layers aligned · Enter")}/>
             </div>
-            <Checklist items={zh?GC_ZH:GC_EN} checks={gold.c} onToggle={gold.toggle} label={t("三层对齐确认","Three-Layer Alignment")} readyText={t("✓ 三层对齐 · 可以入场","✓ Three layers aligned · Enter")}/>
+            <div><SL>{t("执行铁律","Iron Rules")}</SL><Rules items={zh?RULES_GOLD_ZH:RULES_GOLD_EN} hotIdx={[0]}/></div>
           </div>
-          <Divider/>
-          <div><SL>{t("执行铁律","Iron Rules")}</SL><Rules items={zh?RULES_GOLD_ZH:RULES_GOLD_EN} hotIdx={[0]}/></div>
         </>}
 
         {tab===3&&<>
@@ -600,7 +590,7 @@ export default function App(){
         </>}
 
         <div style={{textAlign:"center",paddingTop:8}}>
-          <div style={{fontSize:9,color:"var(--t3)",letterSpacing:".15em"}}>SEA TRADING OS v7.2 · npm install hardened · 弱水三千，只取一瓢 · 先活下来，再赚钱</div>
+          <div style={{fontSize:9,color:"var(--t3)",letterSpacing:".15em"}}>SEA TRADING OS v7.3 · compact layout · 弱水三千，只取一瓢 · 先活下来，再赚钱</div>
         </div>
       </div>
     </ThemeProvider>
