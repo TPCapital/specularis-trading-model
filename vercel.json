@@ -22,7 +22,7 @@
         },
         {
           "key": "X-Sea-Build",
-          "value": "v7.4.2-symmetric-layout-fix"
+          "value": "v7.4.4-pixel-alignment-audit"
         }
       ]
     }
