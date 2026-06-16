@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from "react";
 function ls(k,d){try{var v=localStorage.getItem(k);return v!==null?v:d}catch(e){return d}}
 function lsSet(k,v){try{localStorage.setItem(k,v)}catch(e){}}
 const TODAY=new Date().toDateString();
-const BUILD_ID="v7.4.1 deploy visible fix · 2026-06-17";
+const BUILD_ID="v7.4.2 symmetric layout fix · 2026-06-17";
 
 const PRE_ZH=[
   {t:"今日有无重大数据（FOMC/CPI/NFP）发布？",w:"有 → 降低预期或跳过当天"},
@@ -336,9 +336,9 @@ function StepRail({steps,color="var(--teal)"}){
 // ─── KZGrid：时间更大更突出
 function KZGrid({zones}){
   return(
-    <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:7}}>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:7,height:"100%",alignItems:"stretch"}}>
       {zones.map((z,i)=>(
-        <div key={i} style={{borderRadius:7,padding:"10px 12px",border:`1px solid color-mix(in srgb,${z.c} 40%,transparent)`,background:`color-mix(in srgb,${z.c} 8%,transparent)`}}>
+        <div key={i} style={{borderRadius:7,padding:"10px 12px",border:`1px solid color-mix(in srgb,${z.c} 40%,transparent)`,background:`color-mix(in srgb,${z.c} 8%,transparent)`,minHeight:72,height:"100%",display:"flex",flexDirection:"column",justifyContent:"center"}}>
           <div style={{fontSize:10,fontWeight:800,color:z.c,marginBottom:5,letterSpacing:".06em",textTransform:"uppercase"}}>{z.title}</div>
           <div style={{fontSize:16,fontWeight:800,fontFamily:"monospace",letterSpacing:"-.01em",color:"var(--t1)",marginBottom:4,lineHeight:1}}>{z.time}</div>
           <div style={{fontSize:10,color:"var(--t2)",lineHeight:1.45}}>{z.note}</div>
@@ -504,12 +504,18 @@ export default function App(){
         {tab===0&&<>
           <GEXPanel zh={zh} gex={gex} onSave={handleSaveGex} isToday={gexIsToday}/>
           <Divider/>
-          <div>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
-              <SL>{t("开盘前清单","Pre-Market Checklist")}</SL>
-              <div style={{display:"flex",alignItems:"center",gap:7}}><VixZones vix={vix}/><Rbtn onClick={pre.reset}>{t("重置","Reset")}</Rbtn></div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,alignItems:"stretch"}}>
+            <div>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
+                <SL>{t("开盘前清单","Pre-Market Checklist")}</SL>
+                <div style={{display:"flex",alignItems:"center",gap:7}}><VixZones vix={vix}/><Rbtn onClick={pre.reset}>{t("重置","Reset")}</Rbtn></div>
+              </div>
+              <Checklist items={zh?PRE_ZH:PRE_EN} checks={pre.c} onToggle={pre.toggle} label={t("开盘前检查","Pre-Market Check")} readyText={t("✓ 开盘前检查完毕","✓ Pre-market check complete")}/>
             </div>
-            <Checklist items={zh?PRE_ZH:PRE_EN} checks={pre.c} onToggle={pre.toggle} label={t("开盘前检查","Pre-Market Check")} readyText={t("✓ 开盘前检查完毕","✓ Pre-market check complete")}/>
+            <div>
+              <SL>{t("时间窗口 (ET)","Time Windows (ET)")}</SL>
+              <KZGrid zones={[{title:t("禁做","Banned"),time:"09:30–09:45",note:t("开盘乱流 · 绝对禁区","Opening chaos — no-entry zone"),c:"var(--red)"},{title:t("主战窗口","Primary Window"),time:"09:45–11:30",note:t("趋势确立后入场","Enter after trend establishes"),c:"var(--green)"},{title:t("禁做","Banned"),time:"11:30–16:00",note:t("11:30后不开新仓","No new positions after 11:30 ET"),c:"var(--red)"}]}/>
+            </div>
           </div>
           <Divider/>
           <div>
@@ -518,11 +524,6 @@ export default function App(){
               <Rbtn onClick={day.reset}>{t("重置","Reset")}</Rbtn>
             </div>
             <Checklist items={zh?DAY_ZH:DAY_EN} checks={day.c} onToggle={day.toggle} label={t("入场条件","Entry Conditions")} readyText={t("✓ 全部确认 · 可以入场","✓ All confirmed · Ready to enter")}/>
-          </div>
-          <Divider/>
-          <div>
-            <SL>{t("时间窗口 (ET)","Time Windows (ET)")}</SL>
-            <KZGrid zones={[{title:t("禁做","Banned"),time:"09:30–09:45",note:t("开盘乱流 · 绝对禁区","Opening chaos — no-entry zone"),c:"var(--red)"},{title:t("主战窗口","Primary Window"),time:"09:45–11:30",note:t("趋势确立后入场","Enter after trend establishes"),c:"var(--green)"},{title:t("禁做","Banned"),time:"11:30–16:00",note:t("11:30后不开新仓","No new positions after 11:30 ET"),c:"var(--red)"}]}/>
           </div>
           <Divider/>
           <div><SL>{t("铁律","Iron Rules")}</SL><Rules items={zh?RULES_OPT_ZH:RULES_OPT_EN} hotIdx={[7]}/></div>
@@ -539,14 +540,6 @@ export default function App(){
           </div>
           <Divider/>
           <div>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
-              <SL>{t("正股入场清单","Stock Entry Checklist")}</SL>
-              <Rbtn onClick={sc.reset}>{t("重置","Reset")}</Rbtn>
-            </div>
-            <Checklist items={zh?SC_ZH:SC_EN} checks={sc.c} onToggle={sc.toggle} label={t("入场确认","Entry Confirmation")} readyText={t("✓ 正股入场确认","✓ Stock entry confirmed")}/>
-          </div>
-          <Divider/>
-          <div>
             <SL>{t("VIX 宏观过滤","VIX Macro Filter")}</SL>
             <div style={{display:"flex",gap:6}}>
               {[{r:t("VIX<15","VIX<15"),n:t("低波·低成本·正常参与","Low vol·low cost·normal"),c:"var(--green)",a:vix&&vix<15},{r:t("15–25","15–25"),n:t("正常执行，全力参与","Normal — full participation"),c:"var(--blue)",a:vix&&vix>=15&&vix<25},{r:t("25–35","25–35"),n:t("降低仓位，提高目标","Reduce size · raise targets"),c:"var(--amber)",a:vix&&vix>=25&&vix<35},{r:t(">35 跳过",">35 skip"),n:t("方向混沌，不参与","Direction chaotic — stay out"),c:"var(--red)",a:vix&&vix>=35}].map(z=>(
@@ -558,7 +551,16 @@ export default function App(){
             </div>
           </div>
           <Divider/>
-          <div><SL>{t("执行铁律","Iron Rules")}</SL><Rules items={zh?RULES_STOCK_ZH:RULES_STOCK_EN}/></div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,alignItems:"start"}}>
+            <div>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
+                <SL>{t("正股入场清单","Stock Entry Checklist")}</SL>
+                <Rbtn onClick={sc.reset}>{t("重置","Reset")}</Rbtn>
+              </div>
+              <Checklist items={zh?SC_ZH:SC_EN} checks={sc.c} onToggle={sc.toggle} label={t("入场确认","Entry Confirmation")} readyText={t("✓ 正股入场确认","✓ Stock entry confirmed")}/>
+            </div>
+            <div><SL>{t("执行铁律","Iron Rules")}</SL><Rules items={zh?RULES_STOCK_ZH:RULES_STOCK_EN}/></div>
+          </div>
         </>}
 
         {/* === Gold === */}
@@ -571,7 +573,7 @@ export default function App(){
             <StepRail color="var(--amber)" steps={[{n:"D/4H",t:t("定向+找位","Bias + Level"),d:t("DXY/实际利率 + OB/FVG/POC重叠","DXY/real rates + OB/FVG/POC confluence")},{n:"KZ",t:t("只等窗口","Only Window"),d:t("伦敦15–17 / 纽约21:30–23:30","London 15–17 / NY 21:30–23:30 BJ")},{n:"5M/15M",t:t("确认入场","Confirm"),d:t("CHoCH/BOS + 拒绝 + 收回结构","CHoCH/BOS + rejection + reclaim")},{n:t("风控","Risk"),t:t("只拿中段","Middle Leg"),d:t("止损结构外 · RR≥1:2","Stop outside · RR≥1:2")}]}/>
           </div>
 
-          <div style={{display:"grid",gridTemplateColumns:"1.05fr .95fr",gap:7,alignItems:"start"}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,alignItems:"stretch"}}>
             <div>
               <SL>{t("宏观过滤 · DXY + 实际利率","Macro Filter · DXY + Real Rates")}</SL>
               <div style={{display:"flex",flexDirection:"column",gap:4}}>
@@ -592,7 +594,7 @@ export default function App(){
             </div>
           </div>
 
-          <div style={{display:"grid",gridTemplateColumns:"1.25fr .75fr",gap:7,alignItems:"start"}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,alignItems:"start"}}>
             <div>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5}}>
                 <SL>{t("黄金入场清单","Gold Entry Checklist")}</SL>
@@ -619,19 +621,20 @@ export default function App(){
             <KZGrid zones={[{title:t("伦敦 Kill Zone","London Kill Zone"),time:"15:00–17:00",note:t("EUR主要方向常在此确立","EUR's primary direction usually established here"),c:"var(--blue)"},{title:t("纽约 Kill Zone","New York Kill Zone"),time:"21:30–23:30",note:t("美国数据/纽约开盘是EUR第二主要时段","US data / NY open is EUR's second major session"),c:"var(--green)"},{title:t("禁区","Banned Zone"),time:"ADX<20",note:t("均线缠绕 · ADX<20 · 重大数据前后","Tangled EMAs · ADX<20 · around major data releases"),c:"var(--red)"}]}/>
           </div>
           <Divider/>
-          <div>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
-              <SL>{t("EUR/USD 入场清单","EUR/USD Entry Checklist")}</SL>
-              <Rbtn onClick={eur.reset}>{t("重置","Reset")}</Rbtn>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,alignItems:"start"}}>
+            <div>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
+                <SL>{t("EUR/USD 入场清单","EUR/USD Entry Checklist")}</SL>
+                <Rbtn onClick={eur.reset}>{t("重置","Reset")}</Rbtn>
+              </div>
+              <Checklist items={zh?EC_ZH:EC_EN} checks={eur.c} onToggle={eur.toggle} label={t("趋势确认","Trend Confirmation")} readyText={t("✓ 趋势确认 · 可以入场","✓ Trend confirmed · Enter")}/>
             </div>
-            <Checklist items={zh?EC_ZH:EC_EN} checks={eur.c} onToggle={eur.toggle} label={t("趋势确认","Trend Confirmation")} readyText={t("✓ 趋势确认 · 可以入场","✓ Trend confirmed · Enter")}/>
+            <div><SL>{t("执行铁律","Iron Rules")}</SL><Rules items={zh?RULES_EUR_ZH:RULES_EUR_EN} hotIdx={[0]}/></div>
           </div>
-          <Divider/>
-          <div><SL>{t("执行铁律","Iron Rules")}</SL><Rules items={zh?RULES_EUR_ZH:RULES_EUR_EN} hotIdx={[0]}/></div>
         </>}
 
         <div style={{textAlign:"center",paddingTop:6}}>
-          <div style={{fontSize:9,color:"var(--t3)",letterSpacing:".15em"}}>SEA TRADING OS v7.4.1 · deploy visible fix · visual upgrade · 弱水三千，只取一瓢 · 先活下来，再赚钱</div>
+          <div style={{fontSize:9,color:"var(--t3)",letterSpacing:".15em"}}>SEA TRADING OS v7.4.2 · symmetric layout fix · visual upgrade · 弱水三千，只取一瓢 · 先活下来，再赚钱</div>
         </div>
       </div>
     </ThemeProvider>
