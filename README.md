@@ -43,9 +43,19 @@ vercel --prod
 本包修复 v7 上传后仍显示 v6 的关键问题：
 
 1. `index.html` 标题仍是 `Sea Trading OS v6` → 已改为 `Sea Trading OS v7`。
-2. `package.json` 版本仍是 `6.0.0` → 已改为 `7.1.0`，避免 Vercel 构建日志和缓存识别混乱。
+2. 旧包里 `package.json` 曾残留 v6 版本号；本包已升级为 `7.2.0`，避免 Vercel 构建日志和缓存识别混乱。
 3. 增加 `meta name="sea-build"` 与页面底部 `v7.1 build fixed` 标识，方便确认线上是否已真正更新。
 4. `vercel.json` 增加 `index.html` / `/` 的 no-store 缓存头，降低旧页面缓存导致继续显示 v6 的概率。
 5. 修复 `/api/quote` 的 Yahoo Finance 解析路径：原代码读取 `d.result`，实际应读取 `d.chart.result[0]`。
 
 部署后如仍看到旧版，请在浏览器按 `Ctrl/Cmd + Shift + R` 强制刷新，或在 Vercel 删除旧 Deployment 后重新部署本包。
+
+
+## v7.2 Vercel install hardening
+
+- Removed package-lock.json generated in sandbox to avoid non-public registry URLs in Vercel.
+- Pinned Vercel runtime to Node 20.x via package.json engines and .nvmrc.
+- Added explicit Vercel install/build/output settings.
+- Hardened .npmrc for public registry, no audit/fund/progress, and longer fetch retries.
+
+Expected Vercel flow: npm install -> npm run build -> dist output.
