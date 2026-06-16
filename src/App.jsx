@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from "react";
 function ls(k,d){try{var v=localStorage.getItem(k);return v!==null?v:d}catch(e){return d}}
 function lsSet(k,v){try{localStorage.setItem(k,v)}catch(e){}}
 const TODAY=new Date().toDateString();
-const BUILD_ID="v7.4.2 symmetric layout fix · 2026-06-17";
+const BUILD_ID="v7.4.3 strict alignment layout · 2026-06-17";
 
 const PRE_ZH=[
   {t:"今日有无重大数据（FOMC/CPI/NFP）发布？",w:"有 → 降低预期或跳过当天"},
@@ -304,11 +304,11 @@ function Checklist({items,checks,onToggle,label,readyText}){
 // ─── 铁律：更大字体 + 关键项高亮
 function Rules({items,hotIdx=[]}){
   return(
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+    <div style={{display:"grid",gridTemplateColumns:"1fr",gap:6,height:"100%",alignContent:"start"}}>
       {items.map((r,i)=>{
         const hot=hotIdx.includes(i);
         return(
-          <div key={i} style={{background:"var(--bg3)",border:`1px solid ${hot?"color-mix(in srgb,var(--red) 35%,transparent)":"var(--bd)"}`,borderRadius:6,padding:"7px 10px",display:"flex",gap:8,alignItems:"flex-start"}}>
+          <div key={i} style={{background:"var(--bg3)",border:`1px solid ${hot?"color-mix(in srgb,var(--red) 35%,transparent)":"var(--bd)"}`,borderRadius:6,padding:"7px 10px",display:"flex",gap:8,alignItems:"flex-start",minHeight:34}}>
             <div style={{width:20,height:20,borderRadius:4,background:hot?"color-mix(in srgb,var(--red) 22%,transparent)":"var(--bg4)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:800,color:hot?"var(--red)":"var(--t3)",flexShrink:0}}>{i+1}</div>
             <div style={{fontSize:11,lineHeight:1.4,color:hot?"var(--red)":"var(--t1)",fontWeight:hot?700:400}}>{r}</div>
           </div>
@@ -349,6 +349,7 @@ function KZGrid({zones}){
 }
 
 function SL({children}){return <div style={{fontSize:9,letterSpacing:".18em",color:"var(--t3)",fontWeight:700,textTransform:"uppercase",marginBottom:5}}>{children}</div>;}
+function AlignCol({children}){return <div style={{height:"100%",display:"flex",flexDirection:"column",minWidth:0}}>{children}</div>;}
 function Divider(){return <div style={{height:1,background:"var(--bd)",margin:"2px 0"}}/>;}
 function Ibtn({children,onClick,active}){return <button onClick={onClick} style={{background:active?"color-mix(in srgb,var(--teal) 15%,transparent)":"transparent",border:`1px solid ${active?"var(--teal)":"var(--bd2)"}`,color:active?"var(--teal)":"var(--t2)",borderRadius:6,padding:"5px 12px",fontSize:10,cursor:"pointer",fontFamily:"inherit",letterSpacing:".08em"}}>{children}</button>;}
 function Rbtn({children,onClick}){return <button onClick={onClick} style={{background:"transparent",border:"1px solid var(--bd)",color:"var(--t3)",borderRadius:4,padding:"3px 8px",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>{children}</button>;}
@@ -391,7 +392,7 @@ function GEXPanel({zh,gex,onSave,isToday}){
   return(
     <div>
       <SL>{zh?"GEX 每日设置（必填）":"GEX Daily Setup (required)"}</SL>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:8}}>
+      <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:6,marginBottom:8}}>
         {[{s:"positive",label:zh?"正 GEX · 震荡模式":"Positive GEX · Range",sub:zh?"偏区间 · 少追突破 · 等回踩":"Range bias · avoid chasing · wait pullback",c:"var(--blue)"},{s:"negative",label:zh?"负 GEX · 趋势模式":"Negative GEX · Trend",sub:zh?"偏顺势 · 等破位 · VWAP第一参考":"Trend bias · wait break · VWAP = regime line",c:"var(--amber)"}].map(b=>(
           <button key={b.s} onClick={()=>setG(b.s)} style={{border:`1px solid ${local.state===b.s?b.c+"88":"var(--bd2)"}`,borderRadius:7,padding:"11px 13px",background:local.state===b.s?`color-mix(in srgb,${b.c} 12%,transparent)`:"var(--bg3)",textAlign:"left",cursor:"pointer",fontFamily:"inherit"}}>
             <div style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:".08em",color:b.c,marginBottom:3}}>{b.label}</div>
@@ -504,29 +505,30 @@ export default function App(){
         {tab===0&&<>
           <GEXPanel zh={zh} gex={gex} onSave={handleSaveGex} isToday={gexIsToday}/>
           <Divider/>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,alignItems:"stretch"}}>
-            <div>
+          <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:8,alignItems:"stretch"}}>
+            <AlignCol>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
                 <SL>{t("开盘前清单","Pre-Market Checklist")}</SL>
                 <div style={{display:"flex",alignItems:"center",gap:7}}><VixZones vix={vix}/><Rbtn onClick={pre.reset}>{t("重置","Reset")}</Rbtn></div>
               </div>
               <Checklist items={zh?PRE_ZH:PRE_EN} checks={pre.c} onToggle={pre.toggle} label={t("开盘前检查","Pre-Market Check")} readyText={t("✓ 开盘前检查完毕","✓ Pre-market check complete")}/>
-            </div>
-            <div>
+            </AlignCol>
+            <AlignCol>
               <SL>{t("时间窗口 (ET)","Time Windows (ET)")}</SL>
               <KZGrid zones={[{title:t("禁做","Banned"),time:"09:30–09:45",note:t("开盘乱流 · 绝对禁区","Opening chaos — no-entry zone"),c:"var(--red)"},{title:t("主战窗口","Primary Window"),time:"09:45–11:30",note:t("趋势确立后入场","Enter after trend establishes"),c:"var(--green)"},{title:t("禁做","Banned"),time:"11:30–16:00",note:t("11:30后不开新仓","No new positions after 11:30 ET"),c:"var(--red)"}]}/>
-            </div>
+            </AlignCol>
           </div>
           <Divider/>
-          <div>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
-              <SL>{t("入场清单 · 缺一不可","Entry Checklist · All Required")}</SL>
-              <Rbtn onClick={day.reset}>{t("重置","Reset")}</Rbtn>
-            </div>
-            <Checklist items={zh?DAY_ZH:DAY_EN} checks={day.c} onToggle={day.toggle} label={t("入场条件","Entry Conditions")} readyText={t("✓ 全部确认 · 可以入场","✓ All confirmed · Ready to enter")}/>
+          <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:8,alignItems:"stretch"}}>
+            <AlignCol>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
+                <SL>{t("入场清单 · 缺一不可","Entry Checklist · All Required")}</SL>
+                <Rbtn onClick={day.reset}>{t("重置","Reset")}</Rbtn>
+              </div>
+              <Checklist items={zh?DAY_ZH:DAY_EN} checks={day.c} onToggle={day.toggle} label={t("入场条件","Entry Conditions")} readyText={t("✓ 全部确认 · 可以入场","✓ All confirmed · Ready to enter")}/>
+            </AlignCol>
+            <AlignCol><SL>{t("执行铁律","Iron Rules")}</SL><Rules items={zh?RULES_OPT_ZH:RULES_OPT_EN} hotIdx={[7]}/></AlignCol>
           </div>
-          <Divider/>
-          <div><SL>{t("铁律","Iron Rules")}</SL><Rules items={zh?RULES_OPT_ZH:RULES_OPT_EN} hotIdx={[7]}/></div>
         </>}
 
         {/* === Equities === */}
@@ -551,15 +553,15 @@ export default function App(){
             </div>
           </div>
           <Divider/>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,alignItems:"start"}}>
-            <div>
+          <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:8,alignItems:"stretch"}}>
+            <AlignCol>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
                 <SL>{t("正股入场清单","Stock Entry Checklist")}</SL>
                 <Rbtn onClick={sc.reset}>{t("重置","Reset")}</Rbtn>
               </div>
               <Checklist items={zh?SC_ZH:SC_EN} checks={sc.c} onToggle={sc.toggle} label={t("入场确认","Entry Confirmation")} readyText={t("✓ 正股入场确认","✓ Stock entry confirmed")}/>
-            </div>
-            <div><SL>{t("执行铁律","Iron Rules")}</SL><Rules items={zh?RULES_STOCK_ZH:RULES_STOCK_EN}/></div>
+            </AlignCol>
+            <AlignCol><SL>{t("执行铁律","Iron Rules")}</SL><Rules items={zh?RULES_STOCK_ZH:RULES_STOCK_EN}/></AlignCol>
           </div>
         </>}
 
@@ -573,8 +575,8 @@ export default function App(){
             <StepRail color="var(--amber)" steps={[{n:"D/4H",t:t("定向+找位","Bias + Level"),d:t("DXY/实际利率 + OB/FVG/POC重叠","DXY/real rates + OB/FVG/POC confluence")},{n:"KZ",t:t("只等窗口","Only Window"),d:t("伦敦15–17 / 纽约21:30–23:30","London 15–17 / NY 21:30–23:30 BJ")},{n:"5M/15M",t:t("确认入场","Confirm"),d:t("CHoCH/BOS + 拒绝 + 收回结构","CHoCH/BOS + rejection + reclaim")},{n:t("风控","Risk"),t:t("只拿中段","Middle Leg"),d:t("止损结构外 · RR≥1:2","Stop outside · RR≥1:2")}]}/>
           </div>
 
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,alignItems:"stretch"}}>
-            <div>
+          <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:8,alignItems:"stretch"}}>
+            <AlignCol>
               <SL>{t("宏观过滤 · DXY + 实际利率","Macro Filter · DXY + Real Rates")}</SL>
               <div style={{display:"flex",flexDirection:"column",gap:4}}>
                 {(zh?MACRO_GOLD_ZH:MACRO_GOLD_EN).map((item,i)=>{
@@ -587,22 +589,22 @@ export default function App(){
                   );
                 })}
               </div>
-            </div>
-            <div>
+            </AlignCol>
+            <AlignCol>
               <SL>{t("Kill Zone 时间窗口","Kill Zones")}</SL>
               <KZGrid zones={[{title:t("伦敦","London"),time:"15:00–17:00",note:t("扫亚洲高低 · 定日内方向","Sweep Asia · set direction"),c:"var(--amber)"},{title:t("纽约","New York"),time:"21:30–23:30",note:t("扫伦敦后走主段","Sweep London · main leg"),c:"var(--blue)"},{title:t("禁区","Banned"),time:t("亚盘中间","Asian Mid"),note:t("不追 · 数据瞬间不进","No chase · no data spike"),c:"var(--red)"}]}/>
-            </div>
+            </AlignCol>
           </div>
 
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,alignItems:"start"}}>
-            <div>
+          <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:8,alignItems:"stretch"}}>
+            <AlignCol>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5}}>
                 <SL>{t("黄金入场清单","Gold Entry Checklist")}</SL>
                 <Rbtn onClick={gold.reset}>{t("重置","Reset")}</Rbtn>
               </div>
               <Checklist items={zh?GC_ZH:GC_EN} checks={gold.c} onToggle={gold.toggle} label={t("三层对齐确认","Three-Layer Alignment")} readyText={t("✓ 三层对齐 · 可以入场","✓ Three layers aligned · Enter")}/>
-            </div>
-            <div><SL>{t("执行铁律","Iron Rules")}</SL><Rules items={zh?RULES_GOLD_ZH:RULES_GOLD_EN} hotIdx={[0]}/></div>
+            </AlignCol>
+            <AlignCol><SL>{t("执行铁律","Iron Rules")}</SL><Rules items={zh?RULES_GOLD_ZH:RULES_GOLD_EN} hotIdx={[0]}/></AlignCol>
           </div>
         </>}
 
@@ -621,20 +623,20 @@ export default function App(){
             <KZGrid zones={[{title:t("伦敦 Kill Zone","London Kill Zone"),time:"15:00–17:00",note:t("EUR主要方向常在此确立","EUR's primary direction usually established here"),c:"var(--blue)"},{title:t("纽约 Kill Zone","New York Kill Zone"),time:"21:30–23:30",note:t("美国数据/纽约开盘是EUR第二主要时段","US data / NY open is EUR's second major session"),c:"var(--green)"},{title:t("禁区","Banned Zone"),time:"ADX<20",note:t("均线缠绕 · ADX<20 · 重大数据前后","Tangled EMAs · ADX<20 · around major data releases"),c:"var(--red)"}]}/>
           </div>
           <Divider/>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,alignItems:"start"}}>
-            <div>
+          <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:8,alignItems:"stretch"}}>
+            <AlignCol>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
                 <SL>{t("EUR/USD 入场清单","EUR/USD Entry Checklist")}</SL>
                 <Rbtn onClick={eur.reset}>{t("重置","Reset")}</Rbtn>
               </div>
               <Checklist items={zh?EC_ZH:EC_EN} checks={eur.c} onToggle={eur.toggle} label={t("趋势确认","Trend Confirmation")} readyText={t("✓ 趋势确认 · 可以入场","✓ Trend confirmed · Enter")}/>
-            </div>
-            <div><SL>{t("执行铁律","Iron Rules")}</SL><Rules items={zh?RULES_EUR_ZH:RULES_EUR_EN} hotIdx={[0]}/></div>
+            </AlignCol>
+            <AlignCol><SL>{t("执行铁律","Iron Rules")}</SL><Rules items={zh?RULES_EUR_ZH:RULES_EUR_EN} hotIdx={[0]}/></AlignCol>
           </div>
         </>}
 
         <div style={{textAlign:"center",paddingTop:6}}>
-          <div style={{fontSize:9,color:"var(--t3)",letterSpacing:".15em"}}>SEA TRADING OS v7.4.2 · symmetric layout fix · visual upgrade · 弱水三千，只取一瓢 · 先活下来，再赚钱</div>
+          <div style={{fontSize:9,color:"var(--t3)",letterSpacing:".15em"}}>SEA TRADING OS v7.4.3 · strict alignment layout · visual upgrade · 弱水三千，只取一瓢 · 先活下来，再赚钱</div>
         </div>
       </div>
     </ThemeProvider>

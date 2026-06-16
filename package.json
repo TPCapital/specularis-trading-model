@@ -1,6 +1,6 @@
 {
-  "name": "sea-trading-os-v7-4-2",
-  "version": "7.4.2",
+  "name": "sea-trading-os-v7-4-3",
+  "version": "7.4.3",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -18,7 +18,7 @@
     "tailwindcss": "^3.4.17",
     "vite": "^4.5.5"
   },
-  "description": "Sea Trading OS v7.4.2 symmetric layout fix: option/stock/gold/eur panels aligned in compact two-column layouts.",
+  "description": "Sea Trading OS v7.4.3 strict alignment layout: all entry checklists and iron rules are two-column aligned; iron rules are vertical single-column lists.",
   "engines": {
     "node": "20.x"
   },

@@ -1,6 +1,6 @@
-# Sea Trading OS v7.4.2 — Deploy Visible Fix
+# Sea Trading OS v7.4.3 — Deploy Visible Fix
 
-Build marker: `SEA TRADING OS v7.4.2 · deploy visible fix`
+Build marker: `SEA TRADING OS v7.4.3 · deploy visible fix`
 
 ## 修复点
 - 修正 `index.html` 残留旧版本标识：原来 meta 还是 v7.1、title 还是 v7.3.2。
@@ -13,7 +13,7 @@ Build marker: `SEA TRADING OS v7.4.2 · deploy visible fix`
 部署后页面底部应显示：
 
 ```txt
-SEA TRADING OS v7.4.2 · deploy visible fix · visual upgrade
+SEA TRADING OS v7.4.3 · deploy visible fix · visual upgrade
 ```
 
 如果仍显示旧版，说明 GitHub/Vercel 部署的不是这次提交，或上传时没有覆盖仓库根目录。
