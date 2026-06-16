@@ -1,525 +1,608 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 
-/* ── helpers ── */
 function ls(k,d){try{var v=localStorage.getItem(k);return v!==null?v:d}catch(e){return d}}
 function lsSet(k,v){try{localStorage.setItem(k,v)}catch(e){}}
+const TODAY=new Date().toDateString();
+const BUILD_ID="v7.1 fixed · 2026-06-16";
 
-const TODAY = new Date().toDateString();
-
-/* ── translations ── */
 const PRE_ZH=[
-  {t:"今日有无美联储讲话或重大经济数据发布？",w:"有 → 降低预期或跳过当天"},
-  {t:"VIX是否高于25？",w:"是 → 期权成本贵，缩仓或跳过"},
-  {t:"QQQ的IV Rank是否高于50%？",w:"是 → 需更大方向移动才盈利"},
-  {t:"昨日QQQ收盘方向 + 今日开盘缺口情况？",w:"反向缺口谨慎执行"},
-  {t:"SpotGamma GEX已读取并填入系统？",w:"正GEX偏震荡；负GEX偏趋势；Flip/Wall已记录"},
+  {t:"今日有无重大数据（FOMC/CPI/NFP）发布？",w:"有 → 降低预期或跳过当天"},
+  {t:"VIX是否高于25？",w:"是 → 期权贵，缩仓或跳过"},
+  {t:"QQQ IV Rank是否高于50%？",w:"是 → 需更大方向移动才盈利"},
+  {t:"今日开盘缺口与昨收方向？",w:"反向缺口 → 谨慎执行"},
+  {t:"SpotGamma GEX已读取并填入系统？",w:"正GEX偏震荡；负GEX偏趋势"},
 ];
 const PRE_EN=[
-  {t:"Any Fed speakers or major data releases today?",w:"Yes → lower expectations or skip"},
-  {t:"Is VIX above 25?",w:"Yes → options expensive; reduce or skip"},
+  {t:"Any major data releases today (FOMC/CPI/NFP)?",w:"Yes → lower expectations or skip"},
+  {t:"Is VIX above 25?",w:"Yes → options expensive, reduce or skip"},
   {t:"Is QQQ IV Rank above 50%?",w:"Yes → needs bigger move to profit"},
-  {t:"Yesterday's QQQ close + today's opening gap?",w:"Gap against trend = caution"},
-  {t:"SpotGamma GEX read and entered in system?",w:"Positive GEX = range; Negative GEX = trend"},
+  {t:"Today's gap vs yesterday's close direction?",w:"Gap against trend = caution"},
+  {t:"SpotGamma GEX read and entered?",w:"Pos GEX = range; Neg GEX = trend"},
 ];
 const DAY_ZH=[
-  "GEX环境已填入系统：正/负GEX已确认，Flip和Call/Put Wall价位已记录。",
-  "仓位已过计算器：QQQ固定1张，符合单笔权利金上限。",
-  "标的已确认为QQQ，当日不混用系统。",
-  "时间已确认在09:45–11:30 ET窗口内，不在禁区。",
-  "方向完整：QQQ VWAP方向明确（不横跳附近）。",
-  "EMA已确认：9EMA在21EMA上/下方且发散（不粘合）。",
-  "量能已确认：当前量 > 前5根K线平均量 × 1.5倍。",
+  "GEX环境已填入：正/负GEX已确认，Flip和Call/Put Wall价位已记录。",
+  "标的已确认为QQQ，固定1张合约。",
+  "时间已确认在09:45–11:30 ET窗口内。",
+  "VWAP方向明确（价格不在VWAP附近横跳）。",
+  "EMA确认：9EMA在21EMA上/下方且发散（不粘合）。",
+  "量能确认：当前量 > 前5根K线平均量 × 1.5倍。",
   "四项入场条件全部满足（VWAP + EMA + 量能 + 时间）。",
-  "失效位已写清：止损具体价格，QQQ期权止损 −$20。",
-  "今日无重大数据（FOMC/CPI）发布前后15分钟。",
+  "失效位已写清：止损 −$20，具体出场价已确定。",
   "VIX未超过25，IV Rank未超过50%。",
   "未触发熔断：当日未亏$50 / 未连亏2笔。",
-  "情绪正常：不是回本、证明自己、补偿心理驱动。",
+  "今日无FOMC/CPI发布前后15分钟内。",
+  "情绪正常：无回本、报复、补偿心理。",
+  "今日GEX环境与操作方向一致。",
 ];
 const DAY_EN=[
-  "GEX entered: Positive/Negative confirmed, Flip and Call/Put Wall logged.",
-  "Position sized: 1 contract, within per-trade premium limit.",
-  "Instrument confirmed as QQQ — no cross-system mixing.",
+  "GEX entered: Pos/Neg confirmed, Flip and Call/Put Wall logged.",
+  "Instrument confirmed as QQQ, 1 contract fixed.",
   "Time confirmed within 09:45–11:30 ET window.",
-  "Direction clear: QQQ VWAP decisively above or below.",
+  "VWAP direction clear (not choppy near VWAP).",
   "EMA confirmed: 9EMA above/below 21EMA and diverging.",
-  "Volume confirmed: current bar > prior 5-bar average × 1.5×.",
+  "Volume confirmed: current bar > prior 5-bar avg × 1.5×.",
   "All 4 entry conditions satisfied (VWAP + EMA + Volume + Time).",
-  "Invalidation written: specific stop price, option stop = −$20.",
-  "No major data release (FOMC/CPI) within 15 min.",
+  "Invalidation written: stop = −$20, exact exit price defined.",
   "VIX below 25 and IV Rank below 50%.",
   "No circuit breakers: daily loss < $50, consecutive losses < 2.",
-  "Emotional state normal: no chasing, no proving, no revenge.",
+  "No FOMC/CPI release within 15 min.",
+  "Emotional state normal: no chasing, revenge, or compensation urge.",
+  "GEX environment aligns with intended trade direction.",
 ];
-const RULES_ZH=[
-  "只做QQQ，暂不碰个股",
-  "固定一张，永不加张（重建阶段）",
-  "前15分钟只看不动",
-  "四项入场条件缺一不可",
-  "亏$20无条件出场",
-  "日亏$50停止交易",
-  "11:30后不开新仓",
-  "补偿心理出现 → 立刻停止",
-  "盈利后积累执行记录，不放大",
-  "系统高于感觉 · 纪律高于判断",
+const SC_ZH=[
+  "基本面筛选通过：营收/利润连续增长，行业景气度正向。",
+  "无重大负面事件（诉讼/退市/会计问题）。",
+  "周线趋势不坏：处于关键支撑或突破回踩位置。",
+  "日线结构完整：确认支撑，未破主结构低点。",
+  "60分钟入场确认：拒绝K线 + 量能启动。",
+  "VIX环境允许：VIX未急速上行（<25优先）。",
+  "仓位已计算：符合整体配置比例，非单次押注。",
+  "止损位在主结构下方，不因短期波动出场。",
 ];
-const RULES_EN=[
-  "Trade QQQ only — no individual stocks",
-  "Fixed 1 contract, never scale up (rebuilding)",
-  "First 15 min: observe only, no entries",
-  "All 4 entry conditions required",
-  "−$20 stop loss: unconditional exit",
-  "Daily −$50 limit: stop trading",
-  "No new positions after 11:30 ET",
-  "Revenge psychology → stop immediately",
-  "After profits, build execution record before scaling",
-  "System over instinct, discipline over judgment",
+const SC_EN=[
+  "Fundamental screen passed: consistent revenue/profit growth, positive sector.",
+  "No major negatives (litigation, delisting, accounting issues).",
+  "Weekly trend intact: at key support or post-breakout pullback.",
+  "Daily structure intact: support confirmed, major low not broken.",
+  "60-min entry confirmation: rejection candle + volume.",
+  "VIX environment permits: VIX not surging (<25 preferred).",
+  "Position sized correctly within overall portfolio allocation.",
+  "Stop placed below major structure, not triggered by short-term noise.",
+];
+const GC_ZH=[
+  "宏观方向确认：DXY与实际利率未同时走强（做多黄金前）。",
+  "日线主结构方向明确，处于有利面（多或空）。",
+  "在Kill Zone时间窗口内（伦敦15:00–17:00 / 纽约21:30–23:30）。",
+  "4H/1H找到流动性位置：BSL/SSL已扫出，FVG/OB/POC有重叠。",
+  "15M/5M确认信号：出现CHoCH/BOS + 长影线拒绝 + 量能启动。",
+  "已确认不是只扫不收（价格真正收回结构区）。",
+  "今日无FOMC/CPI/NFP发布，或发布后已等到二次确认。",
+  "止损位放在结构外（扫单高点/低点之外）。",
+  "RR比值 ≥ 1:2，到1:1.5先锁一半利润。",
+];
+const GC_EN=[
+  "Macro confirmed: DXY and real rates not both rising (before long).",
+  "Daily major structure direction clear and favorable.",
+  "Within Kill Zone (London 15:00–17:00 / NY 21:30–23:30 BJ).",
+  "4H/1H liquidity level found: BSL/SSL swept, FVG/OB/POC confluence.",
+  "15M/5M confirmation: CHoCH/BOS + long wick rejection + volume.",
+  "Confirmed reclaim (not just sweep without recovery).",
+  "No FOMC/CPI/NFP today, or second confirmation already waited.",
+  "Stop placed outside structure (beyond sweep high/low).",
+  "RR ratio ≥ 1:2; lock 50% at 1:1.5.",
+];
+const EC_ZH=[
+  "趋势环境确认：EMA 9/21/55顺排，且ADX > 25。",
+  "在Kill Zone时间窗口内（伦敦15:00–17:00 / 纽约21:30–23:30）。",
+  "Kill Zone已扫出前高/前低，方向已确立。",
+  "回踩到EMA21或关键结构支撑位。",
+  "等到拒绝K线确认（影线 + 阳线/阴线收实体）。",
+  "ADX当前 > 20，均线未缠绕。",
+  "今日无重大数据发布前后（FOMC/ECB/CPI/NFP）。",
+  "不是第一根破位K线（等回踩，不追动量）。",
+  "RR比值 ≥ 1:2；设好止损在结构外。",
+];
+const EC_EN=[
+  "Trend environment confirmed: EMA 9/21/55 aligned, ADX > 25.",
+  "Within Kill Zone (London 15:00–17:00 / NY 21:30–23:30 BJ).",
+  "Kill Zone has swept prior high/low, direction established.",
+  "Price pulled back to EMA21 or key structural support.",
+  "Rejection candle confirmed (wick + solid close body).",
+  "ADX currently above 20, EMAs not tangled.",
+  "No major data release nearby (FOMC/ECB/CPI/NFP).",
+  "Not the first breakout candle (waiting for pullback).",
+  "RR ratio ≥ 1:2; stop placed outside structure.",
 ];
 
-/* ── market data hook ── */
-function useMarketData() {
-  const [ticks, setTicks] = useState({});
-  const [status, setStatus] = useState("connecting");
+const RULES_OPT_ZH=["只做QQQ，不碰个股","固定1张，永不加张（重建阶段）","前15分钟只看不动","四项入场条件缺一不可","亏$20无条件出场","日亏$50停止交易","11:30后不开新仓","补偿心理出现 → 立刻停止","盈利后积累执行记录，不放大","系统高于感觉 · 纪律高于判断"];
+const RULES_OPT_EN=["Trade QQQ only — no individual stocks","Fixed 1 contract, never scale up","First 15 min: observe only","All 4 entry conditions required","−$20 stop: unconditional exit","Daily −$50: stop trading","No new positions after 11:30 ET","Revenge psychology → stop immediately","After profits, build record before scaling","System over instinct"];
+const RULES_STOCK_ZH=["先筛基本面，再看技术位置","周线级别持有，不做日内","止损放主结构下方，不因噪音出场","突破确认后才加仓，不摊平下跌","不因K线好看或热点消息入场","VIX急速上行时降低仓位或观望"];
+const RULES_STOCK_EN=["Fundamental screen before technical timing","Hold at weekly timeframe — no intraday","Stop below major structure, not noise","Add only after confirmed breakout","Never enter on aesthetics or hype","Reduce size or observe when VIX spikes"];
+const RULES_GOLD_ZH=["DXY与实际利率双向压制时禁止做多","在Kill Zone内找入场，不在亚洲盘中间位追","等CHoCH/BOS确认，不在测试区抢跑","只拿中间段，止损放结构外","扫单不收回 → 放弃，不入场","FOMC/CPI发布瞬间不进，等二次确认"];
+const RULES_GOLD_EN=["No longs when DXY and real rates both rising","Find entries in Kill Zone, not Asian midrange","Wait for CHoCH/BOS, don't front-run test zones","Take middle leg only, stop outside structure","Sweep without reclaim → abandon","Don't chase FOMC/CPI release — wait for 2nd confirm"];
+const RULES_EUR_ZH=["ADX<20 + 均线缠绕 → 系统无效，不做","等Kill Zone扫出前高低再找入场方向","回踩EMA21/结构位，等拒绝K线确认","不追第一根破位K线，等回踩","RR≥1:2；到1:1.5先锁一半","重大数据发布前后15分钟不入场"];
+const RULES_EUR_EN=["ADX<20 + tangled EMAs → system invalid","Wait for Kill Zone sweep before direction","Pullback to EMA21/structure, wait for rejection","Never chase the first breakout candle","RR ≥ 1:2; lock 50% at 1:1.5","No entries within 15 min of major data release"];
 
-  const fetchQuote = useCallback(async (symbol) => {
-    try {
-      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=2d`;
-      const r = await fetch(url);
-      if (!r.ok) return null;
-      const d = await r.json();
-      const meta = d?.result?.[0]?.meta;
-      if (!meta) return null;
-      const price = meta.regularMarketPrice ?? meta.chartPreviousClose;
-      const prev = meta.chartPreviousClose ?? meta.previousClose ?? price;
-      const chg = price - prev;
-      const pct = prev ? (chg / prev) * 100 : 0;
-      return { price, chg, pct };
-    } catch { return null; }
-  }, []);
+const MACRO_GOLD_ZH=[
+  {s:"实际利率↓ + DXY↓",a:"最友好环境，主动做多",c:"green"},
+  {s:"单向利多（其一）",a:"偏多，需结构确认",c:"blue"},
+  {s:"双向平稳",a:"中性，用SMC结构确认方向",c:"slate"},
+  {s:"单向压制（其一）",a:"谨慎，降仓，等更好位置",c:"amber"},
+  {s:"实际利率↑ + DXY↑",a:"禁止做多，宏观双向压制",c:"red"},
+];
+const MACRO_GOLD_EN=[
+  {s:"Real rates↓ + DXY↓",a:"Most favorable — actively seek longs",c:"green"},
+  {s:"Single tailwind (either)",a:"Bullish bias — require confirmation",c:"blue"},
+  {s:"Both stable",a:"Neutral — use SMC to confirm direction",c:"slate"},
+  {s:"Single headwind (either)",a:"Caution — reduce size, wait for better",c:"amber"},
+  {s:"Real rates↑ + DXY↑",a:"NO longs — dual macro headwind",c:"red"},
+];
 
-  const refresh = useCallback(async () => {
-    const pairs = [
-      ["QQQ","QQQ"],["SPY","SPY"],["GLD","GLD"],
-      ["^VIX","VIX"],["UUP","DXY"],["VXX","VXX"]
-    ];
-    const results = {};
-    let anyOk = false;
-    for (const [sym, key] of pairs) {
-      const d = await fetchQuote(sym);
-      if (d) { results[key] = d; anyOk = true; }
-    }
-    if (results.VXX) {
-      results["IVR"] = { price: 15 + results.VXX.price * 0.9, chg: 0, pct: 0 };
-    }
-    setTicks(results);
-    setStatus(anyOk ? "live" : "offline");
-  }, [fetchQuote]);
-
-  useEffect(() => {
-    refresh();
-    const id = setInterval(refresh, 60000);
-    return () => clearInterval(id);
-  }, [refresh]);
-
-  return { ticks, status };
+function useTheme(){
+  const [dark,setDark]=useState(()=>ls("sea-theme-v7","dark")!=="light");
+  const toggle=()=>{setDark(d=>{const n=!d;lsSet("sea-theme-v7",n?"dark":"light");return n;});};
+  return {dark,toggle};
 }
-
-/* ── clock hook ── */
-function useClock() {
-  const [time, setTime] = useState("");
-  useEffect(() => {
-    const tick = () => {
-      try {
-        const et = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
-        const pad = n => String(n).padStart(2, "0");
-        setTime(`${pad(et.getHours())}:${pad(et.getMinutes())}:${pad(et.getSeconds())} ET`);
-      } catch {}
-    };
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, []);
-  return time;
+function useLang(){
+  const [zh,setZh]=useState(()=>ls("sea-lang-v7","zh")!=="en");
+  const toggle=()=>{setZh(z=>{lsSet("sea-lang-v7",z?"en":"zh");return !z;});};
+  return {zh,toggle};
 }
-
-/* ── GEX hook ── */
-function useGEX() {
-  const EMPTY = { date: TODAY, state: null, flip: "", call: "", put: "", vol: "" };
-  const [gex, setGex] = useState(() => {
-    try {
-      const s = ls("sea-gex-v6", null);
-      if (s) { const p = JSON.parse(s); if (p.date === TODAY) return p; }
-    } catch {}
+function useGEX(){
+  const EMPTY={state:null,flip:"",call:"",put:"",vol:""};
+  const [gex,setGex]=useState(()=>{
+    try{const s=ls("sea-gex-v7",null);if(s){const p=JSON.parse(s);if(p.date===TODAY)return p;}}catch(e){}
     return EMPTY;
   });
-  const save = useCallback((data) => {
-    lsSet("sea-gex-v6", JSON.stringify({ ...data, date: TODAY }));
-    setGex({ ...data, date: TODAY });
-  }, []);
-  return { gex, save, isToday: gex.state !== null && gex.date === TODAY };
+  const save=useCallback((data)=>{lsSet("sea-gex-v7",JSON.stringify({...data,date:TODAY}));setGex({...data,date:TODAY});},[]);
+  return {gex,save,isToday:!!gex.state&&gex.date===TODAY};
+}
+function useChecks(key){
+  const [c,setC]=useState(()=>{try{return JSON.parse(ls("sea-chk-"+key,"{}"));}catch(e){return{};}});
+  const toggle=useCallback((i)=>{setC(p=>{const n={...p,[i]:!p[i]};lsSet("sea-chk-"+key,JSON.stringify(n));return n;});},[key]);
+  const reset=useCallback(()=>{setC({});lsSet("sea-chk-"+key,"{}");},[key]);
+  return {c,toggle,reset,count:Object.values(c).filter(Boolean).length};
+}
+function useQuotes(){
+  const [ticks,setTicks]=useState({});
+  const [status,setStatus]=useState("connecting");
+  const fetch1=useCallback(async(sym)=>{
+    try{
+      const r=await fetch(`/api/quote?symbol=${encodeURIComponent(sym)}`);
+      if(!r.ok)return null;
+      const d=await r.json();
+      return d;
+    }catch(e){return null;}
+  },[]);
+  const refresh=useCallback(async()=>{
+    const pairs=[["QQQ","QQQ"],["SPY","SPY"],["GLD","GLD"],["^VIX","VIX"],["EURUSD=X","EUR"],["UUP","DXY"]];
+    const res={};let ok=false;
+    for(const[sym,key]of pairs){const d=await fetch1(sym);if(d){res[key]=d;ok=true;}}
+    setTicks(res);setStatus(ok?"live":"offline");
+  },[fetch1]);
+  useEffect(()=>{refresh();const id=setInterval(refresh,90000);return()=>clearInterval(id);},[refresh]);
+  return{ticks,status};
+}
+function useClock(){
+  const [t,setT]=useState("--:-- ET");
+  useEffect(()=>{
+    const tick=()=>{try{const et=new Date(new Date().toLocaleString("en-US",{timeZone:"America/New_York"}));const p=n=>String(n).padStart(2,"0");setT(`${p(et.getHours())}:${p(et.getMinutes())} ET`);}catch(e){}};
+    tick();const id=setInterval(tick,30000);return()=>clearInterval(id);
+  },[]);
+  return t;
 }
 
-/* ── checklist hooks ── */
-function useChecklist(storageKey, total, autoFirst) {
-  const [checked, setChecked] = useState(() => {
-    try { return JSON.parse(ls(storageKey, "{}")); } catch { return {}; }
-  });
-  const toggle = useCallback((i) => {
-    setChecked(prev => {
-      const next = { ...prev, [i]: !prev[i] };
-      lsSet(storageKey, JSON.stringify(next));
-      return next;
-    });
-  }, [storageKey]);
-  const reset = useCallback(() => {
-    const next = autoFirst ? { 0: true } : {};
-    setChecked(next);
-    lsSet(storageKey, JSON.stringify(next));
-  }, [storageKey, autoFirst]);
-  const count = Object.values(checked).filter(Boolean).length;
-  return { checked, toggle, reset, count, pct: Math.round(count / total * 100) };
+const C={
+  teal:"#10d9b8",red:"#f87171",amber:"#fbbf24",blue:"#60a5fa",green:"#34d399",violet:"#a78bfa",coral:"#f97316",
+};
+const darkVars={bg:"#0d1117",bg2:"#161b27",bg3:"#1c2333",bg4:"#242e42",t1:"rgba(255,255,255,0.92)",t2:"rgba(255,255,255,0.55)",t3:"rgba(255,255,255,0.28)",bd:"rgba(255,255,255,0.09)",bd2:"rgba(255,255,255,0.18)"};
+const lightVars={bg:"#f8f9fb",bg2:"#ffffff",bg3:"#f0f2f5",bg4:"#e8eaf0",t1:"#0f1117",t2:"#4a5568",t3:"#9aa3b3",bd:"rgba(0,0,0,0.08)",bd2:"rgba(0,0,0,0.16)"};
+
+function ThemeProvider({dark,children}){
+  const v=dark?darkVars:lightVars;
+  const style={
+    "--bg":v.bg,"--bg2":v.bg2,"--bg3":v.bg3,"--bg4":v.bg4,
+    "--t1":v.t1,"--t2":v.t2,"--t3":v.t3,"--bd":v.bd,"--bd2":v.bd2,
+    "--teal":dark?C.teal:"#0a9e87","--red":dark?C.red:"#dc2626",
+    "--amber":dark?C.amber:"#d97706","--blue":dark?C.blue:"#2563eb",
+    "--green":dark?C.green:"#059669","--violet":dark?C.violet:"#7c3aed",
+    background:"var(--bg)",color:"var(--t1)",minHeight:"100vh",
+    fontFamily:"'SF Mono','Fira Code',ui-monospace,monospace",fontSize:12,
+  };
+  return <div style={style}>{children}</div>;
 }
 
-/* ── components ── */
-function TickCell({ sym, label, data, fmt }) {
-  const isLoading = !data;
-  const price = data?.price;
-  const formatted = price != null
-    ? (fmt ? fmt(price) : price >= 10 ? price.toFixed(2) : price.toFixed(3))
-    : "—";
-  const chgStr = data ? `${data.chg >= 0 ? "+" : ""}${data.chg.toFixed(2)} (${data.pct >= 0 ? "+" : ""}${data.pct.toFixed(2)}%)` : "—";
-  const color = !data ? "#4a5568" : data.chg > 0 ? "#34d399" : data.chg < 0 ? "#f87171" : "#718096";
-  return (
-    <div style={{ background: "#0a0f1a", padding: "10px 12px", display: "flex", flexDirection: "column", gap: 2 }}>
-      <div style={{ fontSize: 10, letterSpacing: "0.12em", color: "#718096", fontWeight: 700, textTransform: "uppercase" }}>{label || sym}</div>
-      <div style={{ fontSize: 18, fontWeight: 700, fontFamily: "monospace", color: isLoading ? "#2d3748" : "#f7fafc", animation: isLoading ? "pulse 1.5s infinite" : "none" }}>
-        {isLoading ? "———" : formatted}
-      </div>
-      <div style={{ fontSize: 11, fontWeight: 600, color }}>{isLoading ? "—" : chgStr}</div>
+function Tick({sym,label,data,fmt}){
+  const loading=!data;
+  const price=data?.price;
+  const formatted=price!=null?(fmt?fmt(price):price.toFixed(sym==="EUR"?4:2)):"—";
+  const chgStr=data?`${data.chg>=0?"+":""}${data.chg.toFixed(2)}(${data.pct>=0?"+":""}${data.pct.toFixed(2)}%)`:"—";
+  const col=!data?"var(--t3)":data.chg>0?"var(--green)":data.chg<0?"var(--red)":"var(--t3)";
+  return(
+    <div style={{background:"var(--bg)",padding:"9px 12px"}}>
+      <div style={{fontSize:9,letterSpacing:".12em",color:"var(--t3)",fontWeight:700,textTransform:"uppercase",marginBottom:2}}>{label||sym}</div>
+      <div style={{fontSize:17,fontWeight:700,fontFamily:"monospace",color:loading?"var(--bg4)":"var(--t1)",animation:loading?"pulse 1.2s infinite":"none"}}>{loading?"———":formatted}</div>
+      <div style={{fontSize:10,fontWeight:600,color:col,marginTop:1}}>{loading?"—":chgStr}</div>
     </div>
   );
 }
 
-function VixBadge({ vix }) {
-  if (!vix) return null;
-  const zones = [
-    { label: "VIX<15", active: vix < 15, color: "#34d399" },
-    { label: "15–25", active: vix >= 15 && vix < 25, color: "#60a5fa" },
-    { label: "25–35", active: vix >= 25 && vix < 35, color: "#fbbf24" },
-    { label: ">35 SKIP", active: vix >= 35, color: "#f87171" },
+function VixZones({vix}){
+  const zones=[
+    {r:"VIX<15",c:"var(--green)",a:vix&&vix<15},
+    {r:"15–25",c:"var(--blue)",a:vix&&vix>=15&&vix<25},
+    {r:"25–35",c:"var(--amber)",a:vix&&vix>=25&&vix<35},
+    {r:">35 SKIP",c:"var(--red)",a:vix&&vix>=35},
   ];
-  return (
-    <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-      {zones.map(z => (
-        <span key={z.label} style={{
-          fontSize: 9, letterSpacing: "0.08em", padding: "2px 6px", borderRadius: 4, fontWeight: 700,
-          background: z.active ? `${z.color}18` : "transparent",
-          border: `1px solid ${z.active ? z.color + "66" : "rgba(255,255,255,0.08)"}`,
-          color: z.active ? z.color : "rgba(255,255,255,0.2)",
-          transition: "all .3s"
-        }}>{z.label}</span>
+  return(
+    <div style={{display:"flex",gap:4}}>
+      {zones.map(z=>(
+        <span key={z.r} style={{fontSize:9,letterSpacing:".07em",padding:"2px 6px",borderRadius:4,fontWeight:700,border:`1px solid ${z.a?z.c+"88":"var(--bd)"}`,background:z.a?`color-mix(in srgb,${z.c} 15%,transparent)`:"transparent",color:z.a?z.c:"var(--t3)"}}>
+          {z.r}
+        </span>
       ))}
     </div>
   );
 }
 
-function CheckItem({ text, warn, checked, onClick, locked }) {
-  return (
-    <div onClick={locked ? undefined : onClick} style={{
-      display: "flex", alignItems: "flex-start", gap: 10, padding: "9px 14px",
-      borderBottom: "1px solid rgba(255,255,255,0.06)", cursor: locked ? "default" : "pointer",
-      background: checked ? "rgba(13,217,184,0.04)" : "transparent",
-      transition: "background .1s"
-    }}>
-      <div style={{
-        width: 18, height: 18, borderRadius: 4, border: `1.5px solid ${checked ? "#0dd9b8" : "rgba(255,255,255,0.2)"}`,
-        background: checked ? "#0dd9b8" : "transparent", flexShrink: 0, marginTop: 1,
-        display: "flex", alignItems: "center", justifyContent: "center", transition: "all .15s"
-      }}>
-        {checked && <svg width="10" height="10" viewBox="0 0 12 10" fill="none" stroke="#0a0f1a" strokeWidth="2.5"><polyline points="1,5 4.5,9 11,1"/></svg>}
+function CheckItem({text,warn,checked,onClick}){
+  return(
+    <div onClick={onClick} style={{display:"flex",alignItems:"flex-start",gap:9,padding:"8px 12px",borderBottom:"1px solid var(--bd)",cursor:"pointer",background:checked?"color-mix(in srgb,var(--teal) 5%,transparent)":"transparent"}}>
+      <div style={{width:16,height:16,borderRadius:3,border:`1.5px solid ${checked?"var(--teal)":"var(--bd2)"}`,background:checked?"var(--teal)":"transparent",flexShrink:0,marginTop:1,display:"flex",alignItems:"center",justifyContent:"center"}}>
+        {checked&&<svg width="9" height="9" viewBox="0 0 12 10" fill="none" stroke="var(--bg)" strokeWidth="2.5"><polyline points="1,5 4.5,9 11,1"/></svg>}
       </div>
       <div>
-        <div style={{ fontSize: 12, lineHeight: 1.5, color: checked ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.88)", textDecoration: checked ? "line-through" : "none", textDecorationColor: "rgba(255,255,255,0.2)" }}>{text}</div>
-        {warn && <div style={{ fontSize: 10, color: "#fbbf24", marginTop: 2 }}>{warn}</div>}
+        <div style={{fontSize:11,lineHeight:1.5,color:checked?"var(--t2)":"var(--t1)",textDecoration:checked?"line-through":"none",textDecorationColor:"var(--bd2)"}}>{text}</div>
+        {warn&&<div style={{fontSize:10,color:"var(--amber)",marginTop:2}}>{warn}</div>}
       </div>
     </div>
   );
 }
 
-function SectionLabel({ children }) {
-  return <div style={{ fontSize: 9, letterSpacing: "0.2em", color: "rgba(255,255,255,0.25)", fontWeight: 700, textTransform: "uppercase", marginBottom: 6 }}>{children}</div>;
+function Checklist({items,checks,onToggle,countId,label,readyText}){
+  const count=Object.values(checks).filter(Boolean).length;
+  const total=items.length;
+  const pct=Math.round(count/total*100);
+  const barColor=count===total?"var(--green)":pct>60?"var(--amber)":"var(--red)";
+  return(
+    <div>
+      <div style={{background:"var(--bg3)",border:"1px solid var(--bd)",borderRadius:8,overflow:"hidden"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"9px 12px",borderBottom:"1px solid var(--bd)"}}>
+          <div style={{fontSize:10,fontWeight:700,letterSpacing:".1em",textTransform:"uppercase",color:"var(--t1)"}}>{label}</div>
+          <div style={{fontSize:10,color:"var(--t2)"}}>{count}/{total}</div>
+        </div>
+        <div style={{height:2,background:"var(--bd)"}}><div style={{height:"100%",width:`${pct}%`,background:barColor,transition:"width .3s,background .3s"}}/></div>
+        {items.map((item,i)=>{
+          const text=typeof item==="string"?item:item.t;
+          const warn=typeof item==="object"?item.w:null;
+          return <CheckItem key={i} text={text} warn={warn} checked={!!checks[i]} onClick={()=>onToggle(i)}/>;
+        })}
+      </div>
+      {count===total&&<div style={{marginTop:7,borderRadius:6,padding:"8px 12px",textAlign:"center",fontSize:11,fontWeight:700,letterSpacing:".08em",background:"color-mix(in srgb,var(--green) 12%,transparent)",border:"1px solid color-mix(in srgb,var(--green) 35%,transparent)",color:"var(--green)"}}>{readyText}</div>}
+    </div>
+  );
 }
 
-function ProgBar({ pct, done }) {
-  const color = done ? "#34d399" : pct > 70 ? "#fbbf24" : "#f87171";
-  return <div style={{ height: 2, background: "rgba(255,255,255,0.06)" }}><div style={{ height: "100%", width: `${pct}%`, background: color, transition: "width .3s, background .3s" }}/></div>;
+function Rules({items,hotIdx=[]}){
+  return(
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+      {items.map((r,i)=>{
+        const hot=hotIdx.includes(i);
+        return(
+          <div key={i} style={{background:"var(--bg3)",border:`1px solid ${hot?"color-mix(in srgb,var(--red) 30%,transparent)":"var(--bd)"}`,borderRadius:5,padding:"7px 10px",display:"flex",gap:7,alignItems:"flex-start"}}>
+            <div style={{width:18,height:18,borderRadius:3,background:hot?"color-mix(in srgb,var(--red) 20%,transparent)":"var(--bg4)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,fontWeight:700,color:hot?"var(--red)":"var(--t3)",flexShrink:0}}>{i+1}</div>
+            <div style={{fontSize:10,lineHeight:1.5,color:hot?"var(--red)":"var(--t1)",fontWeight:hot?700:400}}>{r}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
-/* ── main app ── */
-export default function App() {
-  const [lang, setLang] = useState(() => ls("sea-lang-v6", "zh"));
-  const { ticks, status } = useMarketData();
-  const clock = useClock();
-  const { gex, save: saveGex, isToday: gexIsToday } = useGEX();
-  const [editingGex, setEditingGex] = useState(!gexIsToday);
-  const [localGex, setLocalGex] = useState({ state: gex.state, flip: gex.flip, call: gex.call, put: gex.put, vol: gex.vol });
+function StepRail({steps,color="var(--teal)"}){
+  return(
+    <div style={{display:"flex",gap:0,overflow:"hidden",borderRadius:6,border:"1px solid var(--bd)"}}>
+      {steps.map((s,i)=>(
+        <div key={i} style={{flex:1,padding:"8px 10px",background:"var(--bg3)",borderRight:i<steps.length-1?"1px solid var(--bd)":"none"}}>
+          <div style={{fontSize:8,letterSpacing:".12em",color,fontWeight:700,textTransform:"uppercase",marginBottom:3}}>{s.n}</div>
+          <div style={{fontSize:10,fontWeight:700,color:"var(--t1)",marginBottom:2}}>{s.t}</div>
+          <div style={{fontSize:9,color:"var(--t2)",lineHeight:1.5}}>{s.d}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
-  const preChecklist = useChecklist("sea-pre-v6", 5, false);
-  const dayChecklist = useChecklist("sea-day-v6", 13, false);
+function KZGrid({zones}){
+  return(
+    <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:6}}>
+      {zones.map((z,i)=>(
+        <div key={i} style={{borderRadius:6,padding:"8px 10px",border:`1px solid color-mix(in srgb,${z.c} 35%,transparent)`,background:`color-mix(in srgb,${z.c} 7%,transparent)`}}>
+          <div style={{fontSize:10,fontWeight:700,color:z.c,marginBottom:3}}>{z.title}</div>
+          <div style={{fontSize:10,fontWeight:700,fontFamily:"monospace",marginBottom:3}}>{z.time}</div>
+          <div style={{fontSize:10,color:"var(--t2)",lineHeight:1.5}}>{z.note}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
-  const zh = lang === "zh";
-  const t = (a, b) => zh ? a : b;
+function SL({children}){return <div style={{fontSize:9,letterSpacing:".2em",color:"var(--t3)",fontWeight:700,textTransform:"uppercase",marginBottom:5}}>{children}</div>;}
+function Divider(){return <div style={{height:1,background:"var(--bd)",margin:"2px 0"}}/>;}
+function Ibtn({children,onClick,active}){return <button onClick={onClick} style={{background:active?"color-mix(in srgb,var(--teal) 15%,transparent)":"transparent",border:`1px solid ${active?"var(--teal)":"var(--bd2)"}`,color:active?"var(--teal)":"var(--t2)",borderRadius:6,padding:"4px 10px",fontSize:10,cursor:"pointer",fontFamily:"inherit",letterSpacing:".08em"}}>{children}</button>;}
+function Rbtn({children,onClick}){return <button onClick={onClick} style={{background:"transparent",border:"1px solid var(--bd)",color:"var(--t3)",borderRadius:4,padding:"2px 7px",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>{children}</button>;}
 
-  const toggleLang = useCallback(() => {
-    const next = lang === "zh" ? "en" : "zh";
-    setLang(next);
-    lsSet("sea-lang-v6", next);
-  }, [lang]);
+function GEXPanel({zh,gex,onSave,isToday}){
+  const [editing,setEditing]=useState(!isToday);
+  const [local,setLocal]=useState({state:gex.state,flip:gex.flip,call:gex.call,put:gex.put,vol:gex.vol});
+  const setG=s=>setLocal(l=>({...l,state:s}));
+  const handleSave=()=>{if(!local.state)return;onSave(local);setEditing(false);};
+  const handleEdit=()=>{setLocal({state:gex.state,flip:gex.flip,call:gex.call,put:gex.put,vol:gex.vol});setEditing(true);};
+  if(!editing&&isToday){
+    return(
+      <div>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5}}><SL>{zh?"GEX 今日设置":"GEX Today"}</SL><Ibtn onClick={handleEdit}>{zh?"编辑":"Edit"}</Ibtn></div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5}}>
+          {[["Gamma Flip",gex.flip],["Call Wall",gex.call],["Put Wall",gex.put],["Vol Trigger",gex.vol]].map(([n,v])=>(
+            <div key={n} style={{background:"var(--bg3)",border:"1px solid var(--bd)",borderRadius:5,padding:"7px 9px"}}>
+              <div style={{fontSize:8,letterSpacing:".1em",color:"var(--t3)",fontWeight:700,textTransform:"uppercase",marginBottom:3}}>{n}</div>
+              <div style={{fontSize:14,fontWeight:700,fontFamily:"monospace",color:"var(--teal)"}}>{v?"$"+v:"—"}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{marginTop:6,fontSize:10,color:"var(--t2)"}}>
+          {gex.state==="positive"?<span style={{color:"var(--blue)",fontWeight:700}}>{zh?"今日 正GEX · 震荡模式":"Today: Positive GEX · Range mode"}</span>:<span style={{color:"var(--amber)",fontWeight:700}}>{zh?"今日 负GEX · 趋势模式":"Today: Negative GEX · Trend mode"}</span>}
+        </div>
+      </div>
+    );
+  }
+  return(
+    <div>
+      <SL>{zh?"GEX 每日设置（必填）":"GEX Daily Setup (required)"}</SL>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:6}}>
+        {[{s:"positive",label:zh?"正 GEX · 震荡模式":"Positive GEX · Range",sub:zh?"偏区间 · 少追突破 · 等回踩":"Range bias · avoid chasing · wait pullback",c:"var(--blue)"},{s:"negative",label:zh?"负 GEX · 趋势模式":"Negative GEX · Trend",sub:zh?"偏顺势 · 等破位 · VWAP第一参考":"Trend bias · wait break · VWAP = regime line",c:"var(--amber)"}].map(b=>(
+          <button key={b.s} onClick={()=>setG(b.s)} style={{border:`1px solid ${local.state===b.s?b.c+"88":"var(--bd2)"}`,borderRadius:6,padding:"9px 11px",background:local.state===b.s?`color-mix(in srgb,${b.c} 10%,transparent)`:"var(--bg3)",textAlign:"left",cursor:"pointer",fontFamily:"inherit"}}>
+            <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:".1em",color:b.c,marginBottom:2}}>{b.label}</div>
+            <div style={{fontSize:10,color:"var(--t2)"}}>{b.sub}</div>
+          </button>
+        ))}
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5,marginBottom:6}}>
+        {[{k:"flip",n:"Gamma Flip",h:zh?"正负切换位":"Regime flip",p:"480.00"},{k:"call",n:"Call Wall",h:zh?"上方压力":"Overhead",p:"490.00"},{k:"put",n:"Put Wall",h:zh?"下方支撑":"Support",p:"470.00"},{k:"vol",n:"Vol Trigger",h:zh?"波动启动":"Vol expand",p:"475.00"}].map(f=>(
+          <div key={f.k} style={{background:"var(--bg3)",border:"1px solid var(--bd)",borderRadius:5,padding:"7px 9px"}}>
+            <div style={{fontSize:8,letterSpacing:".1em",color:"var(--t3)",fontWeight:700,textTransform:"uppercase",marginBottom:3}}>{f.n}</div>
+            <input value={local[f.k]} onChange={e=>setLocal(l=>({...l,[f.k]:e.target.value}))} placeholder={f.p} inputMode="decimal" style={{background:"transparent",border:"none",color:"var(--teal)",fontSize:14,fontWeight:700,fontFamily:"monospace",width:"100%",outline:"none"}}/>
+            <div style={{fontSize:9,color:"var(--t3)",marginTop:1}}>{f.h}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{display:"flex",justifyContent:"flex-end"}}>
+        <button onClick={handleSave} style={{background:"var(--teal)",border:"none",color:"var(--bg)",borderRadius:5,padding:"5px 16px",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",letterSpacing:".08em"}}>{zh?"保存设置":"Save Setup"}</button>
+      </div>
+    </div>
+  );
+}
 
-  const handleSaveGex = () => {
-    if (!localGex.state) return;
-    saveGex(localGex);
-    setEditingGex(false);
-    if (!dayChecklist.checked[0]) dayChecklist.toggle(0);
-  };
+const TABS=[
+  {id:"opt",labelZh:"QQQ 期权",labelEn:"QQQ Options",color:"var(--teal)"},
+  {id:"stock",labelZh:"正股 配置",labelEn:"Equities",color:"var(--violet)"},
+  {id:"gold",labelZh:"黄金 XAU",labelEn:"Gold XAU",color:"var(--amber)"},
+  {id:"eur",labelZh:"EUR/USD",labelEn:"EUR/USD",color:"var(--blue)"},
+];
 
-  const vix = ticks.VIX?.price;
+export default function App(){
+  const {dark,toggle:toggleTheme}=useTheme();
+  const {zh,toggle:toggleLang}=useLang();
+  const {gex,save:saveGex,isToday:gexIsToday}=useGEX();
+  const {ticks,status}=useQuotes();
+  const clock=useClock();
+  const [tab,setTab]=useState(0);
+  const pre=useChecks("pre");
+  const day=useChecks("day");
+  const sc=useChecks("sc");
+  const gold=useChecks("gold");
+  const eur=useChecks("eur");
 
-  const gexBadgeStyle = !gexIsToday
-    ? { background: "rgba(248,113,113,0.1)", color: "#f87171", border: "1px solid rgba(248,113,113,0.2)" }
-    : gex.state === "positive"
-    ? { background: "rgba(96,165,250,0.15)", color: "#60a5fa", border: "1px solid rgba(96,165,250,0.3)" }
-    : { background: "rgba(251,191,36,0.12)", color: "#fbbf24", border: "1px solid rgba(251,191,36,0.25)" };
+  const t=(a,b)=>zh?a:b;
+  const vix=ticks.VIX?.price;
 
-  const gexBadgeText = !gexIsToday
-    ? t("GEX 未设置", "GEX not set")
-    : gex.state === "positive"
-    ? t("今日 正GEX", "Today +GEX")
-    : t("今日 负GEX", "Today −GEX");
+  const handleSaveGex=useCallback((data)=>{
+    saveGex(data);
+    if(!day.c[0])day.toggle(0);
+  },[saveGex,day]);
 
-  const preItems = zh ? PRE_ZH : PRE_EN;
-  const dayItems = zh ? DAY_ZH : DAY_EN;
-  const rules = zh ? RULES_ZH : RULES_EN;
+  const gexBadge=!gexIsToday
+    ?{cls:"red",txt:t("GEX 未设置","GEX not set")}
+    :gex.state==="positive"?{cls:"blue",txt:t("今日 正GEX","Today +GEX")}:{cls:"amber",txt:t("今日 负GEX","Today −GEX")};
+  const badgeColor={red:"var(--red)",blue:"var(--blue)",amber:"var(--amber)"}[gexBadge.cls];
 
-  const C = (style) => ({ ...style });
-
-  const card = { background: "#111827", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, overflow: "hidden" };
-  const levelCell = { background: "#111827", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 6, padding: "8px 10px" };
-
-  return (
-    <div style={{ minHeight: "100vh", background: "#0a0f1a", color: "#f7fafc", fontFamily: "'SF Mono', 'Fira Code', monospace", paddingBottom: 40 }}>
+  return(
+    <ThemeProvider dark={dark}>
       <style>{`
-        @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+        @keyframes pulse{0%,100%{opacity:.3}50%{opacity:1}}
         @keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
-        *{box-sizing:border-box}
-        input{font-family:inherit}
-        button{font-family:inherit;cursor:pointer}
+        *{box-sizing:border-box;margin:0;padding:0}
+        input,button{font-family:inherit}
         ::-webkit-scrollbar{width:4px}
-        ::-webkit-scrollbar-track{background:#0a0f1a}
-        ::-webkit-scrollbar-thumb{background:#1a2234;border-radius:2px}
+        ::-webkit-scrollbar-track{background:var(--bg)}
+        ::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px}
       `}</style>
 
-      {/* HEADER */}
-      <div style={{ background: "#0a0f1a", borderBottom: "1px solid #0dd9b8", padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, letterSpacing: "0.15em", color: "#0dd9b8" }}>SEA TRADING OS</div>
-          <div style={{ ...gexBadgeStyle, borderRadius: 5, padding: "2px 8px", fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" }}>{gexBadgeText}</div>
-          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <div style={{ width: 6, height: 6, borderRadius: "50%", background: status === "live" ? "#34d399" : "#fbbf24", animation: status === "live" ? "blink 1.5s infinite" : "none" }}/>
-            <span style={{ fontSize: 9, color: "rgba(255,255,255,0.25)", letterSpacing: "0.1em" }}>{status}</span>
+      <div style={{borderBottom:"2px solid var(--teal)",padding:"9px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap",background:"var(--bg)"}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+          <div style={{fontSize:13,fontWeight:700,letterSpacing:".16em",color:"var(--teal)"}}>SEA TRADING OS</div>
+          <span style={{padding:"2px 9px",borderRadius:20,fontSize:9,fontWeight:700,letterSpacing:".1em",textTransform:"uppercase",border:`1px solid color-mix(in srgb,${badgeColor} 40%,transparent)`,background:`color-mix(in srgb,${badgeColor} 14%,transparent)`,color:badgeColor}}>{gexBadge.txt}</span>
+          <div style={{display:"flex",alignItems:"center",gap:4}}>
+            <div style={{width:6,height:6,borderRadius:"50%",background:status==="live"?"var(--green)":"var(--amber)",animation:status==="live"?"blink 1.6s infinite":"none"}}/>
+            <span style={{fontSize:9,color:"var(--t3)",letterSpacing:".1em"}}>{status}</span>
           </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", fontFamily: "monospace", letterSpacing: "0.06em" }}>{clock}</div>
-          <button onClick={toggleLang} style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.5)", borderRadius: 6, padding: "4px 10px", fontSize: 11, letterSpacing: "0.08em" }}>
-            {zh ? "EN" : "中"}
+        <div style={{display:"flex",alignItems:"center",gap:6}}>
+          <div style={{fontSize:10,color:"var(--t3)",fontFamily:"monospace",letterSpacing:".06em"}}>{clock}</div>
+          <Ibtn onClick={toggleTheme}>{dark?"☀":"☾"}</Ibtn>
+          <Ibtn onClick={toggleLang}>{zh?"EN":"中"}</Ibtn>
+        </div>
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:1,background:"var(--bd)",borderBottom:"1px solid var(--bd)"}}>
+        <Tick sym="QQQ" data={ticks.QQQ}/>
+        <Tick sym="VIX" data={ticks.VIX}/>
+        <Tick sym="SPY" data={ticks.SPY}/>
+        <Tick sym="GLD" data={ticks.GLD}/>
+        <Tick sym="EUR" label="EUR/USD" data={ticks.EUR}/>
+        <Tick sym="DXY" label="DXY(UUP)" data={ticks.DXY}/>
+      </div>
+
+      <div style={{display:"flex",gap:2,padding:"8px 14px 0",borderBottom:"1px solid var(--bd)",background:"var(--bg)"}}>
+        {TABS.map((tb,i)=>(
+          <button key={tb.id} onClick={()=>setTab(i)} style={{padding:"6px 13px",borderRadius:"6px 6px 0 0",fontSize:11,fontWeight:700,cursor:"pointer",border:`1px solid ${tab===i?"var(--bd)":"transparent"}`,borderBottom:tab===i?`2px solid ${tb.color}`:"1px solid transparent",background:tab===i?"var(--bg2)":"transparent",color:tab===i?tb.color:"var(--t3)",fontFamily:"inherit",letterSpacing:".06em",marginBottom:tab===i?-1:0}}>
+            {zh?tb.labelZh:tb.labelEn}
           </button>
-        </div>
+        ))}
       </div>
 
-      {/* TICK BAR */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 1, background: "rgba(255,255,255,0.06)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-        <TickCell sym="QQQ" data={ticks.QQQ}/>
-        <TickCell sym="VIX" data={ticks.VIX}/>
-        <TickCell sym="SPY" data={ticks.SPY}/>
-        <TickCell sym="IVR" label="QQQ IV%" data={ticks.IVR} fmt={p => p.toFixed(0) + "%"}/>
-        <TickCell sym="DXY" label="DXY (UUP)" data={ticks.DXY}/>
-        <TickCell sym="GLD" data={ticks.GLD}/>
-      </div>
+      <div style={{background:"var(--bg2)",padding:"12px 14px",display:"flex",flexDirection:"column",gap:10}}>
 
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: "12px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
-
-        {/* GEX SETUP */}
-        <div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-            <SectionLabel>{t("GEX 每日设置", "GEX Daily Setup")}</SectionLabel>
-            {gexIsToday && !editingGex && (
-              <button onClick={() => setEditingGex(true)} style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.4)", borderRadius: 5, padding: "3px 8px", fontSize: 9, letterSpacing: "0.1em" }}>
-                {t("编辑", "Edit")}
-              </button>
-            )}
-          </div>
-
-          {editingGex ? (
-            <div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 6 }}>
-                {[
-                  { state: "positive", label: t("正 GEX · 震荡", "Positive GEX · Range"), sub: t("偏区间 · 等回踩 · 少追突破", "Range bias · wait pullback · avoid chasing"), color: "#60a5fa" },
-                  { state: "negative", label: t("负 GEX · 趋势", "Negative GEX · Trend"), sub: t("偏顺势 · 等破位 · VWAP第一参考", "Trend bias · wait break · VWAP = regime line"), color: "#fbbf24" },
-                ].map(btn => (
-                  <button key={btn.state} onClick={() => setLocalGex(g => ({ ...g, state: btn.state }))}
-                    style={{ border: `1px solid ${localGex.state === btn.state ? btn.color + "88" : "rgba(255,255,255,0.12)"}`, borderRadius: 8, padding: "10px 12px", background: localGex.state === btn.state ? btn.color + "14" : "transparent", textAlign: "left" }}>
-                    <div style={{ fontSize: 10, letterSpacing: "0.12em", fontWeight: 700, textTransform: "uppercase", color: btn.color, marginBottom: 3 }}>{btn.label}</div>
-                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)" }}>{btn.sub}</div>
-                  </button>
-                ))}
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, marginBottom: 6 }}>
-                {[
-                  { key: "flip", label: "Gamma Flip", hint: t("正负切换位", "Regime flip"), ph: "480.00" },
-                  { key: "call", label: "Call Wall", hint: t("上方压力", "Overhead resistance"), ph: "490.00" },
-                  { key: "put", label: "Put Wall", hint: t("下方支撑", "Downside support"), ph: "470.00" },
-                  { key: "vol", label: "Vol Trigger", hint: t("波动启动", "Vol expansion"), ph: "475.00" },
-                ].map(f => (
-                  <div key={f.key} style={levelCell}>
-                    <div style={{ fontSize: 9, letterSpacing: "0.1em", color: "rgba(255,255,255,0.25)", fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>{f.label}</div>
-                    <input value={localGex[f.key]} onChange={e => setLocalGex(g => ({ ...g, [f.key]: e.target.value }))}
-                      placeholder={f.ph} inputMode="decimal"
-                      style={{ background: "transparent", border: "none", color: "#0dd9b8", fontSize: 15, fontWeight: 700, fontFamily: "monospace", width: "100%", outline: "none" }}/>
-                    <div style={{ fontSize: 9, color: "rgba(255,255,255,0.2)", marginTop: 2 }}>{f.hint}</div>
-                  </div>
-                ))}
-              </div>
-              <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                <button onClick={handleSaveGex} style={{ background: "#0dd9b8", border: "none", color: "#0a0f1a", borderRadius: 5, padding: "5px 16px", fontSize: 10, fontWeight: 700, letterSpacing: "0.08em" }}>
-                  {t("保存设置", "Save Setup")}
-                </button>
-              </div>
+        {tab===0&&<>
+          <GEXPanel zh={zh} gex={gex} onSave={handleSaveGex} isToday={gexIsToday}/>
+          <Divider/>
+          <div>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5}}>
+              <SL>{t("开盘前清单","Pre-Market Checklist")}</SL>
+              <div style={{display:"flex",alignItems:"center",gap:6}}><VixZones vix={vix}/><Rbtn onClick={pre.reset}>{t("重置","Reset")}</Rbtn></div>
             </div>
-          ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
-              {[
-                { label: "Gamma Flip", val: gex.flip },
-                { label: "Call Wall", val: gex.call },
-                { label: "Put Wall", val: gex.put },
-                { label: "Vol Trigger", val: gex.vol },
-              ].map(f => (
-                <div key={f.label} style={levelCell}>
-                  <div style={{ fontSize: 9, letterSpacing: "0.1em", color: "rgba(255,255,255,0.25)", fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>{f.label}</div>
-                  <div style={{ fontSize: 15, fontWeight: 700, fontFamily: "monospace", color: "#0dd9b8" }}>{f.val ? "$" + f.val : "—"}</div>
+            <Checklist items={zh?PRE_ZH:PRE_EN} checks={pre.c} onToggle={pre.toggle} label={t("开盘前检查","Pre-Market Check")} readyText={t("✓ 开盘前检查完毕","✓ Pre-market check complete")}/>
+          </div>
+          <Divider/>
+          <div>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5}}>
+              <SL>{t("入场清单 · 缺一不可","Entry Checklist · All Required")}</SL>
+              <Rbtn onClick={day.reset}>{t("重置","Reset")}</Rbtn>
+            </div>
+            <Checklist items={zh?DAY_ZH:DAY_EN} checks={day.c} onToggle={day.toggle} label={t("入场条件","Entry Conditions")} readyText={t("✓ 全部确认 · 可以入场","✓ All confirmed · Ready to enter")}/>
+          </div>
+          <Divider/>
+          <div>
+            <SL>{t("快速参考 · $1,000账户","Quick Ref · $1,000 Account")}</SL>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6}}>
+              {[{l:t("每笔止损","Per-Trade Stop"),v:"−$20",c:"var(--red)"},{l:t("每笔目标","Per-Trade Target"),v:"+$40",c:"var(--green)"},{l:t("日亏熔断","Daily Limit"),v:"−$50",c:"var(--red)"},{l:t("时间止盈","Time Stop"),v:"45 min",c:"var(--amber)"}].map(item=>(
+                <div key={item.l} style={{background:"var(--bg3)",border:"1px solid var(--bd)",borderRadius:6,padding:"8px 10px"}}>
+                  <div style={{fontSize:9,textTransform:"uppercase",letterSpacing:".1em",color:"var(--t3)",fontWeight:700,marginBottom:3}}>{item.l}</div>
+                  <div style={{fontSize:14,fontWeight:700,fontFamily:"monospace",color:item.c}}>{item.v}</div>
                 </div>
               ))}
             </div>
-          )}
-        </div>
+          </div>
+          <Divider/>
+          <div>
+            <SL>{t("时间窗口 (ET)","Time Windows (ET)")}</SL>
+            <KZGrid zones={[{title:t("禁做","Banned"),time:"09:30–09:45",note:t("开盘乱流 · 绝对禁区","Opening chaos — no-entry zone"),c:"var(--red)"},{title:t("主战窗口","Primary Window"),time:"09:45–11:30",note:t("趋势确立后入场","Enter after trend establishes"),c:"var(--green)"},{title:t("禁做","Banned"),time:"11:30–16:00",note:t("11:30后不开新仓","No new positions after 11:30 ET"),c:"var(--red)"}]}/>
+          </div>
+          <Divider/>
+          <div><SL>{t("铁律","Iron Rules")}</SL><Rules items={zh?RULES_OPT_ZH:RULES_OPT_EN} hotIdx={[7]}/></div>
+        </>}
 
-        {/* PRE-MARKET CHECKLIST */}
-        <div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-            <SectionLabel>{t("开盘前清单", "Pre-Market Checklist")}</SectionLabel>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <VixBadge vix={vix}/>
-              <button onClick={preChecklist.reset} style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.25)", borderRadius: 5, padding: "2px 8px", fontSize: 9, letterSpacing: "0.08em" }}>
-                {t("重置", "Reset")}
-              </button>
+        {tab===1&&<>
+          <div>
+            <SL>{t("美股正股 · 低频配置系统","US Equities · Low-Frequency System")}</SL>
+            <div style={{background:`color-mix(in srgb,var(--violet) 8%,transparent)`,border:`1px solid color-mix(in srgb,var(--violet) 30%,transparent)`,borderRadius:6,padding:"9px 11px",fontSize:10,color:"var(--t2)",lineHeight:1.6,marginBottom:8}}>
+              {t("底仓系统，非当前主战场。先筛公司质量，再等技术位置，低频持有。不做日内，不追热点。","Foundation system — not the primary battleground. Screen quality first, wait for technical levels, hold low-frequency. No intraday, no hype-chasing.")}
+            </div>
+            <StepRail color="var(--violet)" steps={[{n:t("第一步","Step 1"),t:t("基本面筛选","Fundamental Screen"),d:t("营收/利润连续增长 · 行业景气 · 无重大负面","Consistent revenue/profit growth · positive sector · no major negatives")},{n:t("第二步","Step 2"),t:t("技术择时","Technical Timing"),d:t("周线趋势不坏 · 关键支撑 · 突破回踩日线确认","Weekly trend intact · key support · breakout pullback + daily confirm")},{n:t("第三步","Step 3"),t:t("持仓管理","Position Management"),d:t("周线级别持有 · 结构下方止损 · 不摊平下跌","Weekly timeframe hold · stop below structure · never average down")}]}/>
+          </div>
+          <Divider/>
+          <div>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5}}>
+              <SL>{t("正股入场清单","Stock Entry Checklist")}</SL>
+              <Rbtn onClick={sc.reset}>{t("重置","Reset")}</Rbtn>
+            </div>
+            <Checklist items={zh?SC_ZH:SC_EN} checks={sc.c} onToggle={sc.toggle} label={t("入场确认","Entry Confirmation")} readyText={t("✓ 正股入场确认","✓ Stock entry confirmed")}/>
+          </div>
+          <Divider/>
+          <div>
+            <SL>{t("VIX 宏观过滤","VIX Macro Filter")}</SL>
+            <div style={{display:"flex",gap:5}}>
+              {[{r:t("VIX<15","VIX<15"),n:t("低波·低成本·正常参与","Low vol·low cost·normal"),c:"var(--green)",a:vix&&vix<15},{r:t("15–25","15–25"),n:t("正常执行，全力参与","Normal — full participation"),c:"var(--blue)",a:vix&&vix>=15&&vix<25},{r:t("25–35","25–35"),n:t("降低仓位，提高目标","Reduce size · raise targets"),c:"var(--amber)",a:vix&&vix>=25&&vix<35},{r:t(">35 跳过",">35 skip"),n:t("方向混沌，不参与","Direction chaotic — stay out"),c:"var(--red)",a:vix&&vix>=35}].map(z=>(
+                <div key={z.r} style={{flex:1,borderRadius:5,border:`1px solid ${z.a?"color-mix(in srgb,"+z.c+" 40%,transparent)":"var(--bd)"}`,padding:"6px 8px",background:z.a?`color-mix(in srgb,${z.c} 10%,transparent)`:"var(--bg3)",opacity:z.a?1:.5,transition:"all .2s"}}>
+                  <div style={{fontSize:9,fontWeight:700,color:z.c,marginBottom:2}}>{z.r}</div>
+                  <div style={{fontSize:9,color:"var(--t2)",lineHeight:1.4}}>{z.n}</div>
+                </div>
+              ))}
             </div>
           </div>
-          <div style={card}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" }}>{t("开盘前检查", "Pre-Market Check")}</div>
-              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", letterSpacing: "0.08em" }}>{preChecklist.count}/5</div>
+          <Divider/>
+          <div><SL>{t("执行铁律","Iron Rules")}</SL><Rules items={zh?RULES_STOCK_ZH:RULES_STOCK_EN}/></div>
+        </>}
+
+        {tab===2&&<>
+          <div>
+            <SL>{t("黄金 XAU/USD · 三层对齐系统","Gold XAU/USD · Three-Layer System")}</SL>
+            <div style={{background:`color-mix(in srgb,var(--amber) 8%,transparent)`,border:`1px solid color-mix(in srgb,var(--amber) 30%,transparent)`,borderRadius:6,padding:"9px 11px",fontSize:10,color:"var(--t2)",lineHeight:1.6,marginBottom:8}}>
+              {t("宏观驱动决定方向 · SMC结构决定位置 · Kill Zone决定时间 · 三层全对齐才出手","Macro drives direction · SMC structure determines level · Kill Zone determines timing · all three must align")}
             </div>
-            <ProgBar pct={preChecklist.pct} done={preChecklist.count === 5}/>
-            {preItems.map((item, i) => (
-              <CheckItem key={i} text={item.t} warn={item.w} checked={!!preChecklist.checked[i]} onClick={() => preChecklist.toggle(i)}/>
-            ))}
+            <StepRail color="var(--amber)" steps={[{n:"日线",t:t("定向","Direction"),d:t("宏观驱动方向 + 主结构OB + 流动性格局","Macro driver direction + major OB + liquidity landscape")},{n:"4H/1H",t:t("找位","Find Level"),d:t("BSL/SSL流动性 + FVG + POC集中区 + 结构重叠","BSL/SSL liquidity + FVG + POC cluster + structural overlap")},{n:"15M/5M",t:t("确认","Confirm"),d:t("等收回/拒绝/CHoCH·BOS，不在测试区抢跑","Wait for reclaim/rejection/CHoCH·BOS — no front-running")},{n:t("执行","Execute"),t:t("只拿中间段","Middle Leg Only"),d:t("止损放结构外 · 信号不完整直接放弃","Stop outside structure · incomplete signal = abandon")}]}/>
           </div>
-        </div>
-
-        {/* ENTRY CHECKLIST */}
-        <div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-            <SectionLabel>{t("入场前清单 · 缺一不可", "Entry Checklist · All Required")}</SectionLabel>
-            <button onClick={dayChecklist.reset} style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.25)", borderRadius: 5, padding: "2px 8px", fontSize: 9, letterSpacing: "0.08em" }}>
-              {t("重置", "Reset")}
-            </button>
-          </div>
-          <div style={card}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" }}>{t("入场条件", "Entry Conditions")}</div>
-              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", letterSpacing: "0.08em" }}>{dayChecklist.count}/13</div>
+          <Divider/>
+          <div>
+            <SL>{t("宏观过滤 · DXY + 实际利率","Macro Filter · DXY + Real Rates")}</SL>
+            <div style={{display:"flex",flexDirection:"column",gap:4}}>
+              {(zh?MACRO_GOLD_ZH:MACRO_GOLD_EN).map((item,i)=>{
+                const col={green:"var(--green)",blue:"var(--blue)",slate:"var(--t3)",amber:"var(--amber)",red:"var(--red)"}[item.c];
+                return(
+                  <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 9px",borderRadius:5,border:`1px solid ${i===4?"color-mix(in srgb,var(--red) 25%,transparent)":"var(--bd)"}`,background:i===4?"color-mix(in srgb,var(--red) 6%,transparent)":"var(--bg3)"}}>
+                    <div style={{fontSize:10,fontWeight:700,flex:1,color:col}}>{item.s}</div>
+                    <div style={{fontSize:9,color:"var(--t2)"}}>{item.a}</div>
+                  </div>
+                );
+              })}
             </div>
-            <ProgBar pct={dayChecklist.pct} done={dayChecklist.count === 13}/>
-            {dayItems.map((text, i) => (
-              <CheckItem key={i} text={text} checked={!!dayChecklist.checked[i]} onClick={() => dayChecklist.toggle(i)} locked={i === 0 && gexIsToday}/>
-            ))}
           </div>
-          {dayChecklist.count === 13 && (
-            <div style={{ marginTop: 8, background: "rgba(13,217,184,0.1)", border: "1px solid rgba(13,217,184,0.3)", borderRadius: 8, padding: "10px 14px", textAlign: "center", fontSize: 12, fontWeight: 700, color: "#0dd9b8", letterSpacing: "0.08em" }}>
-              {t("✓ 全部确认 · 可以入场", "✓ All confirmed · Ready to enter")}
+          <Divider/>
+          <div>
+            <SL>{t("Kill Zone 时间窗口 (北京时间)","Kill Zones (Beijing Time)")}</SL>
+            <KZGrid zones={[{title:t("伦敦 Kill Zone","London Kill Zone"),time:"15:00–17:00",note:t("扫亚洲盘高低点 · 常设定当日方向","Sweeps Asian highs/lows · often sets day direction"),c:"var(--amber)"},{title:t("纽约 Kill Zone","New York Kill Zone"),time:"21:30–23:30",note:t("扫伦敦高低后定方向 · 主要走势段","Sweeps London levels then sets direction"),c:"var(--blue)"},{title:t("禁区","Banned Zone"),time:t("亚盘中间位","Asian Midrange"),note:t("不追亚洲盘中间位 · FOMC/CPI发布瞬间不进","No Asian midrange chase · no entry at FOMC/CPI release"),c:"var(--red)"}]}/>
+          </div>
+          <Divider/>
+          <div>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5}}>
+              <SL>{t("黄金入场清单","Gold Entry Checklist")}</SL>
+              <Rbtn onClick={gold.reset}>{t("重置","Reset")}</Rbtn>
             </div>
-          )}
-        </div>
-
-        {/* QUICK REF */}
-        <div>
-          <SectionLabel>{t("快速参考 · QQQ $1,000账户", "Quick Ref · QQQ $1,000 Account")}</SectionLabel>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
-            {[
-              { label: t("每笔止损", "Per-Trade Stop"), val: "−$20", c: "#f87171", bg: "rgba(248,113,113,0.08)", bd: "rgba(248,113,113,0.2)" },
-              { label: t("每笔目标", "Per-Trade Target"), val: "+$40", c: "#34d399", bg: "rgba(52,211,153,0.08)", bd: "rgba(52,211,153,0.2)" },
-              { label: t("日亏熔断", "Daily Limit"), val: "−$50", c: "#f87171", bg: "rgba(248,113,113,0.08)", bd: "rgba(248,113,113,0.2)" },
-              { label: t("时间止盈", "Time Stop"), val: "45 min", c: "#fbbf24", bg: "rgba(251,191,36,0.08)", bd: "rgba(251,191,36,0.2)" },
-            ].map(item => (
-              <div key={item.label} style={{ background: item.bg, border: `1px solid ${item.bd}`, borderRadius: 7, padding: "8px 10px", textAlign: "center" }}>
-                <div style={{ fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", marginBottom: 4, fontWeight: 700 }}>{item.label}</div>
-                <div style={{ fontSize: 16, fontWeight: 700, fontFamily: "monospace", color: item.c }}>{item.val}</div>
-              </div>
-            ))}
+            <Checklist items={zh?GC_ZH:GC_EN} checks={gold.c} onToggle={gold.toggle} label={t("三层对齐确认","Three-Layer Alignment")} readyText={t("✓ 三层对齐 · 可以入场","✓ Three layers aligned · Enter")}/>
           </div>
-        </div>
+          <Divider/>
+          <div><SL>{t("执行铁律","Iron Rules")}</SL><Rules items={zh?RULES_GOLD_ZH:RULES_GOLD_EN} hotIdx={[0]}/></div>
+        </>}
 
-        {/* TIME WINDOWS */}
-        <div>
-          <SectionLabel>{t("交易时间窗口 (ET)", "Time Windows (ET)")}</SectionLabel>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
-            {[
-              { range: "09:30–09:45", status: t("禁做", "Banned"), note: t("开盘乱流 · 绝对禁区", "Opening chaos — no-entry zone"), active: false, banned: true },
-              { range: "09:45–11:30", status: t("主战窗口", "Primary Window"), note: t("趋势确立后入场 · 全力执行", "Enter after trend establishes"), active: true, banned: false },
-              { range: "11:30–16:00", status: t("禁做", "Banned"), note: t("11:30后不开新仓", "No new positions after 11:30 ET"), active: false, banned: true },
-            ].map(w => (
-              <div key={w.range} style={{
-                borderRadius: 7, padding: 10, border: `1px solid ${w.banned ? "rgba(248,113,113,0.25)" : w.active ? "rgba(52,211,153,0.35)" : "rgba(255,255,255,0.08)"}`,
-                background: w.banned ? "rgba(248,113,113,0.05)" : w.active ? "rgba(52,211,153,0.06)" : "#111827"
-              }}>
-                <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 3, color: w.banned ? "#f87171" : w.active ? "#34d399" : "rgba(255,255,255,0.4)" }}>{w.status}</div>
-                <div style={{ fontSize: 11, fontWeight: 700, fontFamily: "monospace", letterSpacing: "0.05em", marginBottom: 4 }}>{w.range}</div>
-                <div style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", lineHeight: 1.4 }}>{w.note}</div>
-              </div>
-            ))}
+        {tab===3&&<>
+          <div>
+            <SL>{t("EUR/USD · 趋势跟踪系统","EUR/USD · Trend-Following System")}</SL>
+            <div style={{background:`color-mix(in srgb,var(--blue) 8%,transparent)`,border:`1px solid color-mix(in srgb,var(--blue) 30%,transparent)`,borderRadius:6,padding:"9px 11px",fontSize:10,color:"var(--t2)",lineHeight:1.6,marginBottom:8}}>
+              {t("EMA顺排 + ADX>25确认趋势环境 → Kill Zone回踩结构位等确认 → 只拿中间段。ADX<20 + 均线缠绕时系统无效，不做。","EMA aligned + ADX>25 confirms trend → Kill Zone pullback to structure for entry → take middle leg only. ADX<20 + tangled EMAs = system invalid.")}
+            </div>
+            <StepRail color="var(--blue)" steps={[{n:"Step 1",t:t("趋势过滤","Trend Filter"),d:t("EMA 9/21/55顺排 + ADX>25，先确认趋势环境","EMA 9/21/55 aligned + ADX>25 — confirm trend first")},{n:"Step 2",t:"Kill Zone",d:t("伦敦/纽约开盘窗口，扫前高低点后定方向","London/NY open — sweep prior levels then set direction")},{n:"Step 3",t:t("找回踩位","Find Pullback"),d:t("回踩EMA21或关键结构位，等拒绝K线确认","Pullback to EMA21 or key structure, wait for rejection candle")},{n:"Step 4",t:t("执行","Execute"),d:t("RR≥1:2 · 到1:1.5先锁一半 · 不追第一根破位","RR ≥ 1:2 · lock 50% at 1:1.5 · never chase the first breakout candle")}]}/>
           </div>
-        </div>
-
-        {/* IRON RULES */}
-        <div>
-          <SectionLabel>{t("铁律 · QQQ期权", "Iron Rules · QQQ Options")}</SectionLabel>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-            {rules.map((rule, i) => (
-              <div key={i} style={{ background: "#111827", border: `1px solid ${i === 7 ? "rgba(248,113,113,0.25)" : "rgba(255,255,255,0.08)"}`, borderRadius: 6, padding: "8px 10px", display: "flex", gap: 8, alignItems: "flex-start" }}>
-                <div style={{ width: 20, height: 20, borderRadius: 4, background: i === 7 ? "rgba(248,113,113,0.2)" : "#1a2234", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 700, color: i === 7 ? "#f87171" : "rgba(255,255,255,0.4)", flexShrink: 0 }}>{i + 1}</div>
-                <div style={{ fontSize: 11, color: i === 7 ? "#f87171" : "rgba(255,255,255,0.88)", lineHeight: 1.5, fontWeight: i === 7 ? 700 : 400 }}>{rule}</div>
-              </div>
-            ))}
+          <Divider/>
+          <div>
+            <SL>{t("Kill Zone 时间窗口 (北京时间)","Kill Zones (Beijing Time)")}</SL>
+            <KZGrid zones={[{title:t("伦敦 Kill Zone","London Kill Zone"),time:"15:00–17:00",note:t("EUR主要方向常在此确立","EUR's primary direction usually established here"),c:"var(--blue)"},{title:t("纽约 Kill Zone","New York Kill Zone"),time:"21:30–23:30",note:t("美国数据/纽约开盘是EUR第二主要时段","US data / NY open is EUR's second major session"),c:"var(--green)"},{title:t("禁区","Banned Zone"),time:"ADX<20",note:t("均线缠绕 · ADX<20 · 重大数据前后","Tangled EMAs · ADX<20 · around major data releases"),c:"var(--red)"}]}/>
           </div>
-        </div>
-
-        <div style={{ textAlign: "center", paddingTop: 8 }}>
-          <div style={{ fontSize: 9, color: "rgba(255,255,255,0.15)", letterSpacing: "0.15em" }}>
-            SEA TRADING OS v6 · 弱水三千，只取一瓢 · 先活下来，再赚钱
+          <Divider/>
+          <div>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5}}>
+              <SL>{t("EUR/USD 入场清单","EUR/USD Entry Checklist")}</SL>
+              <Rbtn onClick={eur.reset}>{t("重置","Reset")}</Rbtn>
+            </div>
+            <Checklist items={zh?EC_ZH:EC_EN} checks={eur.c} onToggle={eur.toggle} label={t("趋势确认","Trend Confirmation")} readyText={t("✓ 趋势确认 · 可以入场","✓ Trend confirmed · Enter")}/>
           </div>
-        </div>
+          <Divider/>
+          <div><SL>{t("执行铁律","Iron Rules")}</SL><Rules items={zh?RULES_EUR_ZH:RULES_EUR_EN} hotIdx={[0]}/></div>
+        </>}
 
+        <div style={{textAlign:"center",paddingTop:8}}>
+          <div style={{fontSize:9,color:"var(--t3)",letterSpacing:".15em"}}>SEA TRADING OS v7.1 · build fixed · 弱水三千，只取一瓢 · 先活下来，再赚钱</div>
+        </div>
       </div>
-    </div>
+    </ThemeProvider>
   );
 }
