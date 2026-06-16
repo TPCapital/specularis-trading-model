@@ -1,27 +1,38 @@
-# Sea Trading OS v6 — 极简纪律执行终端
+# Sea Trading OS v7 — 四模块极简执行终端
 
-## 核心功能
+## 四大模块
 
-- **实时行情** — QQQ / VIX / SPY / IV% / DXY / GLD 实时拉取 Yahoo Finance，每60秒自动刷新
-- **GEX 每日设置** — 正/负GEX一键选择，Gamma Flip / Call Wall / Put Wall / Vol Trigger价位录入
-- **开盘前清单** — 5项开盘前检查 + VIX环境实时标注
-- **入场前清单** — 13项入场条件 + 进度条 + 全满提示
-- **快速参考** — 固定止损$20 / 目标$40 / 日限$50 / 时间45min
-- **时间窗口** — 三色显示禁做/主战时段
-- **铁律面板** — 10条执行铁律，第8条危险标红
-- **双语支持** — 中/英文一键切换
+| 模块 | 系统逻辑 | 关键条件 |
+|------|----------|----------|
+| QQQ 期权 | GEX + VWAP + EMA + 量能 + 时间窗口 | 09:45–11:30 ET 主战 |
+| 正股配置 | 基本面筛选 → 技术择时 → 周线持有 | VIX 环境过滤 |
+| 黄金 XAU | 宏观DXY+实际利率 → SMC结构 → Kill Zone | 北京 15:00 / 21:30 |
+| EUR/USD | EMA顺排 + ADX>25 → Kill Zone → 回踩确认 | ADX<20 时系统无效 |
 
-## 部署
+## 实时行情
+
+通过 `/api/quote` Vercel Edge Function 代理 Yahoo Finance，解决 CORS 问题。
+支持：QQQ / VIX / SPY / GLD / EUR-USD / DXY(UUP)
+
+## 部署到 Vercel
 
 ```bash
 npm install
 npm run build
-# vercel deploy --prod
+vercel --prod
 ```
 
-## 数据说明
+或直接 `vercel deploy` 无需预先 build（Vercel 会自动执行）。
 
-- 行情通过 Yahoo Finance 公开 API 拉取，无需 API Key
-- DXY 近似值使用 UUP ETF（美元指数基金）替代
-- IV% 为基于 VXX 的估算值，供参考
-- 所有 GEX / 清单数据储存在本地浏览器 localStorage，不上传
+## 直接覆盖部署
+
+将本包解压到原有 GitHub 仓库根目录，直接覆盖所有文件，push 后 Vercel 自动重新部署。
+
+覆盖说明：
+- `src/App.jsx` — 主程序（全新）
+- `api/quote.js` — 行情代理（新增）
+- `vercel.json` — 路由配置（更新）
+- `src/index.css` / `src/main.jsx` — 不变
+- `package.json` / `vite.config.js` 等 — 不变
+
+旧版的 `src/i18n.js` 已不再需要（内容已内联到 App.jsx），保留无影响。
