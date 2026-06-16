@@ -1,6 +1,6 @@
 {
-  "name": "sea-trading-os",
-  "version": "7.3.0",
+  "name": "sea-trading-os-v7-4",
+  "version": "7.4.0",
   "type": "module",
   "scripts": {
     "dev": "vite",

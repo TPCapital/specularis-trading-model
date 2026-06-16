@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from "react";
 function ls(k,d){try{var v=localStorage.getItem(k);return v!==null?v:d}catch(e){return d}}
 function lsSet(k,v){try{localStorage.setItem(k,v)}catch(e){}}
 const TODAY=new Date().toDateString();
-const BUILD_ID="v7.3 compact layout · 2026-06-16";
+const BUILD_ID="v7.4 visual upgrade · 2026-06-17";
 
 const PRE_ZH=[
   {t:"今日有无重大数据（FOMC/CPI/NFP）发布？",w:"有 → 降低预期或跳过当天"},
@@ -207,23 +207,36 @@ function ThemeProvider({dark,children}){
     "--amber":dark?C.amber:"#d97706","--blue":dark?C.blue:"#2563eb",
     "--green":dark?C.green:"#059669","--violet":dark?C.violet:"#7c3aed",
     background:"var(--bg)",color:"var(--t1)",minHeight:"100vh",
-    fontFamily:"'SF Mono','Fira Code',ui-monospace,monospace",fontSize:12,
+    fontFamily:"'SF Mono','Fira Code',ui-monospace,monospace",fontSize:13,
   };
   return <div style={style}>{children}</div>;
 }
 
+// ─── TICKER: 大数字 + 变化
 function Tick({sym,label,data,fmt}){
   const loading=!data;
   const price=data?.price;
   const formatted=price!=null?(fmt?fmt(price):price.toFixed(sym==="EUR"?4:2)):"—";
-  const chgStr=data?`${data.chg>=0?"+":""}${data.chg.toFixed(2)}(${data.pct>=0?"+":""}${data.pct.toFixed(2)}%)`:"—";
+  const chgStr=data?`${data.chg>=0?"+":""}${data.chg.toFixed(2)}`:"—";
+  const pctStr=data?`${data.pct>=0?"+":""}${data.pct.toFixed(2)}%`:"—";
   const col=!data?"var(--t3)":data.chg>0?"var(--green)":data.chg<0?"var(--red)":"var(--t3)";
   return(
-    <div style={{background:"var(--bg)",padding:"9px 12px"}}>
-      <div style={{fontSize:9,letterSpacing:".12em",color:"var(--t3)",fontWeight:700,textTransform:"uppercase",marginBottom:2}}>{label||sym}</div>
-      <div style={{fontSize:17,fontWeight:700,fontFamily:"monospace",color:loading?"var(--bg4)":"var(--t1)",animation:loading?"pulse 1.2s infinite":"none"}}>{loading?"———":formatted}</div>
-      <div style={{fontSize:10,fontWeight:600,color:col,marginTop:1}}>{loading?"—":chgStr}</div>
+    <div style={{background:"var(--bg)",padding:"10px 14px",borderRight:"1px solid var(--bd)",display:"flex",flexDirection:"column",justifyContent:"space-between",minWidth:0}}>
+      <div style={{fontSize:9,letterSpacing:".14em",color:"var(--t3)",fontWeight:700,textTransform:"uppercase",marginBottom:4}}>{label||sym}</div>
+      <div style={{fontSize:22,fontWeight:800,fontFamily:"monospace",letterSpacing:"-.02em",color:loading?"var(--bg4)":"var(--t1)",animation:loading?"pulse 1.2s infinite":"none",lineHeight:1}}>{loading?"———":formatted}</div>
+      <div style={{display:"flex",gap:6,marginTop:4,alignItems:"center"}}>
+        <span style={{fontSize:11,fontWeight:700,color:col}}>{loading?"—":chgStr}</span>
+        <span style={{fontSize:10,color:col,opacity:.8}}>{loading?"—":pctStr}</span>
+      </div>
     </div>
+  );
+}
+
+function VixBadge({vix}){
+  if(!vix) return null;
+  const z=vix<15?{c:"var(--green)",t:"LOW VOL"}:vix<25?{c:"var(--blue)",t:"NORMAL"}:vix<35?{c:"var(--amber)",t:"ELEVATED"}:{c:"var(--red)",t:"EXTREME"};
+  return(
+    <span style={{fontSize:9,letterSpacing:".1em",padding:"2px 7px",borderRadius:4,fontWeight:800,border:`1px solid ${z.c}66`,background:`color-mix(in srgb,${z.c} 15%,transparent)`,color:z.c}}>{z.t}</span>
   );
 }
 
@@ -237,7 +250,7 @@ function VixZones({vix}){
   return(
     <div style={{display:"flex",gap:4}}>
       {zones.map(z=>(
-        <span key={z.r} style={{fontSize:9,letterSpacing:".07em",padding:"2px 6px",borderRadius:4,fontWeight:700,border:`1px solid ${z.a?z.c+"88":"var(--bd)"}`,background:z.a?`color-mix(in srgb,${z.c} 15%,transparent)`:"transparent",color:z.a?z.c:"var(--t3)"}}>
+        <span key={z.r} style={{fontSize:9,letterSpacing:".07em",padding:"2px 7px",borderRadius:4,fontWeight:700,border:`1px solid ${z.a?z.c+"88":"var(--bd)"}`,background:z.a?`color-mix(in srgb,${z.c} 15%,transparent)`:"transparent",color:z.a?z.c:"var(--t3)"}}>
           {z.r}
         </span>
       ))}
@@ -245,21 +258,23 @@ function VixZones({vix}){
   );
 }
 
+// ─── CHECKLIST 条目：更大、行高更宽松
 function CheckItem({text,warn,checked,onClick}){
   return(
-    <div onClick={onClick} style={{display:"flex",alignItems:"flex-start",gap:7,padding:"5px 9px",borderBottom:"1px solid var(--bd)",cursor:"pointer",background:checked?"color-mix(in srgb,var(--teal) 5%,transparent)":"transparent"}}>
-      <div style={{width:16,height:16,borderRadius:3,border:`1.5px solid ${checked?"var(--teal)":"var(--bd2)"}`,background:checked?"var(--teal)":"transparent",flexShrink:0,marginTop:1,display:"flex",alignItems:"center",justifyContent:"center"}}>
-        {checked&&<svg width="9" height="9" viewBox="0 0 12 10" fill="none" stroke="var(--bg)" strokeWidth="2.5"><polyline points="1,5 4.5,9 11,1"/></svg>}
+    <div onClick={onClick} style={{display:"flex",alignItems:"flex-start",gap:9,padding:"8px 12px",borderBottom:"1px solid var(--bd)",cursor:"pointer",background:checked?"color-mix(in srgb,var(--teal) 6%,transparent)":"transparent",transition:"background .15s"}}>
+      <div style={{width:18,height:18,borderRadius:4,border:`1.5px solid ${checked?"var(--teal)":"var(--bd2)"}`,background:checked?"var(--teal)":"transparent",flexShrink:0,marginTop:1,display:"flex",alignItems:"center",justifyContent:"center",transition:"all .15s"}}>
+        {checked&&<svg width="10" height="10" viewBox="0 0 12 10" fill="none" stroke="var(--bg)" strokeWidth="2.5"><polyline points="1,5 4.5,9 11,1"/></svg>}
       </div>
-      <div>
-        <div style={{fontSize:10,lineHeight:1.35,color:checked?"var(--t2)":"var(--t1)",textDecoration:checked?"line-through":"none",textDecorationColor:"var(--bd2)"}}>{text}</div>
-        {warn&&<div style={{fontSize:9,color:"var(--amber)",marginTop:1}}>{warn}</div>}
+      <div style={{flex:1}}>
+        <div style={{fontSize:11,lineHeight:1.5,color:checked?"var(--t2)":"var(--t1)",textDecoration:checked?"line-through":"none",textDecorationColor:"var(--bd2)"}}>{text}</div>
+        {warn&&<div style={{fontSize:10,color:"var(--amber)",marginTop:2,fontWeight:600}}>{warn}</div>}
       </div>
     </div>
   );
 }
 
-function Checklist({items,checks,onToggle,countId,label,readyText}){
+// ─── 进度条更粗 + 数字更大
+function Checklist({items,checks,onToggle,label,readyText}){
   const count=Object.values(checks).filter(Boolean).length;
   const total=items.length;
   const pct=Math.round(count/total*100);
@@ -267,31 +282,35 @@ function Checklist({items,checks,onToggle,countId,label,readyText}){
   return(
     <div>
       <div style={{background:"var(--bg3)",border:"1px solid var(--bd)",borderRadius:8,overflow:"hidden"}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 9px",borderBottom:"1px solid var(--bd)"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 12px",borderBottom:"1px solid var(--bd)"}}>
           <div style={{fontSize:10,fontWeight:700,letterSpacing:".1em",textTransform:"uppercase",color:"var(--t1)"}}>{label}</div>
-          <div style={{fontSize:10,color:"var(--t2)"}}>{count}/{total}</div>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <div style={{fontSize:18,fontWeight:800,fontFamily:"monospace",color:barColor,lineHeight:1}}>{count}<span style={{fontSize:11,color:"var(--t3)",fontWeight:400}}>/{total}</span></div>
+          </div>
         </div>
-        <div style={{height:1,background:"var(--bd)"}}><div style={{height:"100%",width:`${pct}%`,background:barColor,transition:"width .3s,background .3s"}}/></div>
+        {/* 4px 进度条 */}
+        <div style={{height:4,background:"var(--bd)"}}><div style={{height:"100%",width:`${pct}%`,background:barColor,transition:"width .3s,background .3s",borderRadius:"0 2px 2px 0"}}/></div>
         {items.map((item,i)=>{
           const text=typeof item==="string"?item:item.t;
           const warn=typeof item==="object"?item.w:null;
           return <CheckItem key={i} text={text} warn={warn} checked={!!checks[i]} onClick={()=>onToggle(i)}/>;
         })}
       </div>
-      {count===total&&<div style={{marginTop:5,borderRadius:6,padding:"6px 10px",textAlign:"center",fontSize:11,fontWeight:700,letterSpacing:".08em",background:"color-mix(in srgb,var(--green) 12%,transparent)",border:"1px solid color-mix(in srgb,var(--green) 35%,transparent)",color:"var(--green)"}}>{readyText}</div>}
+      {count===total&&<div style={{marginTop:6,borderRadius:6,padding:"8px 12px",textAlign:"center",fontSize:12,fontWeight:800,letterSpacing:".1em",background:"color-mix(in srgb,var(--green) 14%,transparent)",border:"1px solid color-mix(in srgb,var(--green) 40%,transparent)",color:"var(--green)"}}>{readyText}</div>}
     </div>
   );
 }
 
+// ─── 铁律：更大字体 + 关键项高亮
 function Rules({items,hotIdx=[]}){
   return(
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:5}}>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
       {items.map((r,i)=>{
         const hot=hotIdx.includes(i);
         return(
-          <div key={i} style={{background:"var(--bg3)",border:`1px solid ${hot?"color-mix(in srgb,var(--red) 30%,transparent)":"var(--bd)"}`,borderRadius:5,padding:"5px 8px",display:"flex",gap:6,alignItems:"flex-start"}}>
-            <div style={{width:18,height:18,borderRadius:3,background:hot?"color-mix(in srgb,var(--red) 20%,transparent)":"var(--bg4)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,fontWeight:700,color:hot?"var(--red)":"var(--t3)",flexShrink:0}}>{i+1}</div>
-            <div style={{fontSize:9,lineHeight:1.35,color:hot?"var(--red)":"var(--t1)",fontWeight:hot?700:400}}>{r}</div>
+          <div key={i} style={{background:"var(--bg3)",border:`1px solid ${hot?"color-mix(in srgb,var(--red) 35%,transparent)":"var(--bd)"}`,borderRadius:6,padding:"7px 10px",display:"flex",gap:8,alignItems:"flex-start"}}>
+            <div style={{width:20,height:20,borderRadius:4,background:hot?"color-mix(in srgb,var(--red) 22%,transparent)":"var(--bg4)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:800,color:hot?"var(--red)":"var(--t3)",flexShrink:0}}>{i+1}</div>
+            <div style={{fontSize:11,lineHeight:1.4,color:hot?"var(--red)":"var(--t1)",fontWeight:hot?700:400}}>{r}</div>
           </div>
         );
       })}
@@ -299,39 +318,42 @@ function Rules({items,hotIdx=[]}){
   );
 }
 
+// ─── StepRail：步骤编号更大，主文字更大
 function StepRail({steps,color="var(--teal)"}){
   return(
-    <div style={{display:"flex",gap:0,overflow:"hidden",borderRadius:6,border:"1px solid var(--bd)"}}>
+    <div style={{display:"flex",gap:0,overflow:"hidden",borderRadius:7,border:"1px solid var(--bd)"}}>
       {steps.map((s,i)=>(
-        <div key={i} style={{flex:1,padding:"6px 8px",background:"var(--bg3)",borderRight:i<steps.length-1?"1px solid var(--bd)":"none"}}>
-          <div style={{fontSize:8,letterSpacing:".12em",color,fontWeight:700,textTransform:"uppercase",marginBottom:3}}>{s.n}</div>
-          <div style={{fontSize:10,fontWeight:700,color:"var(--t1)",marginBottom:2}}>{s.t}</div>
-          <div style={{fontSize:9,color:"var(--t2)",lineHeight:1.35}}>{s.d}</div>
+        <div key={i} style={{flex:1,padding:"10px 12px",background:"var(--bg3)",borderRight:i<steps.length-1?"1px solid var(--bd)":"none"}}>
+          <div style={{fontSize:9,letterSpacing:".12em",color,fontWeight:800,textTransform:"uppercase",marginBottom:4}}>{s.n}</div>
+          <div style={{fontSize:12,fontWeight:800,color:"var(--t1)",marginBottom:3}}>{s.t}</div>
+          <div style={{fontSize:10,color:"var(--t2)",lineHeight:1.45}}>{s.d}</div>
         </div>
       ))}
     </div>
   );
 }
 
+// ─── KZGrid：时间更大更突出
 function KZGrid({zones}){
   return(
-    <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:6}}>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:7}}>
       {zones.map((z,i)=>(
-        <div key={i} style={{borderRadius:6,padding:"6px 8px",border:`1px solid color-mix(in srgb,${z.c} 35%,transparent)`,background:`color-mix(in srgb,${z.c} 7%,transparent)`}}>
-          <div style={{fontSize:10,fontWeight:700,color:z.c,marginBottom:3}}>{z.title}</div>
-          <div style={{fontSize:10,fontWeight:700,fontFamily:"monospace",marginBottom:3}}>{z.time}</div>
-          <div style={{fontSize:9,color:"var(--t2)",lineHeight:1.35}}>{z.note}</div>
+        <div key={i} style={{borderRadius:7,padding:"10px 12px",border:`1px solid color-mix(in srgb,${z.c} 40%,transparent)`,background:`color-mix(in srgb,${z.c} 8%,transparent)`}}>
+          <div style={{fontSize:10,fontWeight:800,color:z.c,marginBottom:5,letterSpacing:".06em",textTransform:"uppercase"}}>{z.title}</div>
+          <div style={{fontSize:16,fontWeight:800,fontFamily:"monospace",letterSpacing:"-.01em",color:"var(--t1)",marginBottom:4,lineHeight:1}}>{z.time}</div>
+          <div style={{fontSize:10,color:"var(--t2)",lineHeight:1.45}}>{z.note}</div>
         </div>
       ))}
     </div>
   );
 }
 
-function SL({children}){return <div style={{fontSize:9,letterSpacing:".18em",color:"var(--t3)",fontWeight:700,textTransform:"uppercase",marginBottom:4}}>{children}</div>;}
-function Divider(){return <div style={{height:1,background:"var(--bd)",margin:"1px 0"}}/>;}
-function Ibtn({children,onClick,active}){return <button onClick={onClick} style={{background:active?"color-mix(in srgb,var(--teal) 15%,transparent)":"transparent",border:`1px solid ${active?"var(--teal)":"var(--bd2)"}`,color:active?"var(--teal)":"var(--t2)",borderRadius:6,padding:"4px 10px",fontSize:10,cursor:"pointer",fontFamily:"inherit",letterSpacing:".08em"}}>{children}</button>;}
-function Rbtn({children,onClick}){return <button onClick={onClick} style={{background:"transparent",border:"1px solid var(--bd)",color:"var(--t3)",borderRadius:4,padding:"2px 7px",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>{children}</button>;}
+function SL({children}){return <div style={{fontSize:9,letterSpacing:".18em",color:"var(--t3)",fontWeight:700,textTransform:"uppercase",marginBottom:5}}>{children}</div>;}
+function Divider(){return <div style={{height:1,background:"var(--bd)",margin:"2px 0"}}/>;}
+function Ibtn({children,onClick,active}){return <button onClick={onClick} style={{background:active?"color-mix(in srgb,var(--teal) 15%,transparent)":"transparent",border:`1px solid ${active?"var(--teal)":"var(--bd2)"}`,color:active?"var(--teal)":"var(--t2)",borderRadius:6,padding:"5px 12px",fontSize:10,cursor:"pointer",fontFamily:"inherit",letterSpacing:".08em"}}>{children}</button>;}
+function Rbtn({children,onClick}){return <button onClick={onClick} style={{background:"transparent",border:"1px solid var(--bd)",color:"var(--t3)",borderRadius:4,padding:"3px 8px",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>{children}</button>;}
 
+// ─── GEX Panel：数值放大到 20px
 function GEXPanel({zh,gex,onSave,isToday}){
   const [editing,setEditing]=useState(!isToday);
   const [local,setLocal]=useState({state:gex.state,flip:gex.flip,call:gex.call,put:gex.put,vol:gex.vol});
@@ -341,17 +363,27 @@ function GEXPanel({zh,gex,onSave,isToday}){
   if(!editing&&isToday){
     return(
       <div>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5}}><SL>{zh?"GEX 今日设置":"GEX Today"}</SL><Ibtn onClick={handleEdit}>{zh?"编辑":"Edit"}</Ibtn></div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5}}>
-          {[["Gamma Flip",gex.flip],["Call Wall",gex.call],["Put Wall",gex.put],["Vol Trigger",gex.vol]].map(([n,v])=>(
-            <div key={n} style={{background:"var(--bg3)",border:"1px solid var(--bd)",borderRadius:5,padding:"7px 9px"}}>
-              <div style={{fontSize:8,letterSpacing:".1em",color:"var(--t3)",fontWeight:700,textTransform:"uppercase",marginBottom:3}}>{n}</div>
-              <div style={{fontSize:14,fontWeight:700,fontFamily:"monospace",color:"var(--teal)"}}>{v?"$"+v:"—"}</div>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}><SL>{zh?"GEX 今日设置":"GEX Today"}</SL><Ibtn onClick={handleEdit}>{zh?"编辑":"Edit"}</Ibtn></div>
+        {/* 模式Badge + 四格大数值 */}
+        <div style={{marginBottom:8}}>
+          {gex.state==="positive"
+            ?<div style={{display:"inline-flex",alignItems:"center",gap:8,padding:"5px 12px",borderRadius:6,border:"1px solid color-mix(in srgb,var(--blue) 40%,transparent)",background:"color-mix(in srgb,var(--blue) 10%,transparent)"}}>
+              <span style={{fontSize:14,fontWeight:800,color:"var(--blue)",letterSpacing:".04em"}}>{zh?"✦ 正GEX · 震荡模式":"✦ Positive GEX · Range"}</span>
+              <span style={{fontSize:10,color:"var(--t2)"}}>{zh?"偏区间 · 等回踩":"Range bias · wait pullback"}</span>
+            </div>
+            :<div style={{display:"inline-flex",alignItems:"center",gap:8,padding:"5px 12px",borderRadius:6,border:"1px solid color-mix(in srgb,var(--amber) 40%,transparent)",background:"color-mix(in srgb,var(--amber) 10%,transparent)"}}>
+              <span style={{fontSize:14,fontWeight:800,color:"var(--amber)",letterSpacing:".04em"}}>{zh?"⚡ 负GEX · 趋势模式":"⚡ Negative GEX · Trend"}</span>
+              <span style={{fontSize:10,color:"var(--t2)"}}>{zh?"偏顺势 · 等破位":"Trend bias · wait break"}</span>
+            </div>
+          }
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6}}>
+          {[["Gamma Flip",gex.flip,"var(--teal)"],["Call Wall",gex.call,"var(--red)"],["Put Wall",gex.put,"var(--green)"],["Vol Trigger",gex.vol,"var(--amber)"]].map(([n,v,c])=>(
+            <div key={n} style={{background:"var(--bg3)",border:`1px solid ${v?"color-mix(in srgb,"+c+" 30%,transparent)":"var(--bd)"}`,borderRadius:6,padding:"10px 12px"}}>
+              <div style={{fontSize:8,letterSpacing:".1em",color:"var(--t3)",fontWeight:700,textTransform:"uppercase",marginBottom:5}}>{n}</div>
+              <div style={{fontSize:20,fontWeight:800,fontFamily:"monospace",letterSpacing:"-.01em",color:v?c:"var(--bg4)",lineHeight:1}}>{v?"$"+v:"—"}</div>
             </div>
           ))}
-        </div>
-        <div style={{marginTop:6,fontSize:10,color:"var(--t2)"}}>
-          {gex.state==="positive"?<span style={{color:"var(--blue)",fontWeight:700}}>{zh?"今日 正GEX · 震荡模式":"Today: Positive GEX · Range mode"}</span>:<span style={{color:"var(--amber)",fontWeight:700}}>{zh?"今日 负GEX · 趋势模式":"Today: Negative GEX · Trend mode"}</span>}
         </div>
       </div>
     );
@@ -359,25 +391,25 @@ function GEXPanel({zh,gex,onSave,isToday}){
   return(
     <div>
       <SL>{zh?"GEX 每日设置（必填）":"GEX Daily Setup (required)"}</SL>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:5,marginBottom:6}}>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:8}}>
         {[{s:"positive",label:zh?"正 GEX · 震荡模式":"Positive GEX · Range",sub:zh?"偏区间 · 少追突破 · 等回踩":"Range bias · avoid chasing · wait pullback",c:"var(--blue)"},{s:"negative",label:zh?"负 GEX · 趋势模式":"Negative GEX · Trend",sub:zh?"偏顺势 · 等破位 · VWAP第一参考":"Trend bias · wait break · VWAP = regime line",c:"var(--amber)"}].map(b=>(
-          <button key={b.s} onClick={()=>setG(b.s)} style={{border:`1px solid ${local.state===b.s?b.c+"88":"var(--bd2)"}`,borderRadius:6,padding:"9px 11px",background:local.state===b.s?`color-mix(in srgb,${b.c} 10%,transparent)`:"var(--bg3)",textAlign:"left",cursor:"pointer",fontFamily:"inherit"}}>
-            <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:".1em",color:b.c,marginBottom:2}}>{b.label}</div>
+          <button key={b.s} onClick={()=>setG(b.s)} style={{border:`1px solid ${local.state===b.s?b.c+"88":"var(--bd2)"}`,borderRadius:7,padding:"11px 13px",background:local.state===b.s?`color-mix(in srgb,${b.c} 12%,transparent)`:"var(--bg3)",textAlign:"left",cursor:"pointer",fontFamily:"inherit"}}>
+            <div style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:".08em",color:b.c,marginBottom:3}}>{b.label}</div>
             <div style={{fontSize:10,color:"var(--t2)"}}>{b.sub}</div>
           </button>
         ))}
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5,marginBottom:6}}>
-        {[{k:"flip",n:"Gamma Flip",h:zh?"正负切换位":"Regime flip",p:"480.00"},{k:"call",n:"Call Wall",h:zh?"上方压力":"Overhead",p:"490.00"},{k:"put",n:"Put Wall",h:zh?"下方支撑":"Support",p:"470.00"},{k:"vol",n:"Vol Trigger",h:zh?"波动启动":"Vol expand",p:"475.00"}].map(f=>(
-          <div key={f.k} style={{background:"var(--bg3)",border:"1px solid var(--bd)",borderRadius:5,padding:"7px 9px"}}>
-            <div style={{fontSize:8,letterSpacing:".1em",color:"var(--t3)",fontWeight:700,textTransform:"uppercase",marginBottom:3}}>{f.n}</div>
-            <input value={local[f.k]} onChange={e=>setLocal(l=>({...l,[f.k]:e.target.value}))} placeholder={f.p} inputMode="decimal" style={{background:"transparent",border:"none",color:"var(--teal)",fontSize:14,fontWeight:700,fontFamily:"monospace",width:"100%",outline:"none"}}/>
-            <div style={{fontSize:9,color:"var(--t3)",marginTop:1}}>{f.h}</div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6,marginBottom:8}}>
+        {[{k:"flip",n:"Gamma Flip",h:zh?"正负切换位":"Regime flip",p:"480.00",c:"var(--teal)"},{k:"call",n:"Call Wall",h:zh?"上方压力":"Overhead",p:"490.00",c:"var(--red)"},{k:"put",n:"Put Wall",h:zh?"下方支撑":"Support",p:"470.00",c:"var(--green)"},{k:"vol",n:"Vol Trigger",h:zh?"波动启动":"Vol expand",p:"475.00",c:"var(--amber)"}].map(f=>(
+          <div key={f.k} style={{background:"var(--bg3)",border:"1px solid var(--bd)",borderRadius:6,padding:"10px 12px"}}>
+            <div style={{fontSize:8,letterSpacing:".1em",color:"var(--t3)",fontWeight:700,textTransform:"uppercase",marginBottom:4}}>{f.n}</div>
+            <input value={local[f.k]} onChange={e=>setLocal(l=>({...l,[f.k]:e.target.value}))} placeholder={f.p} inputMode="decimal" style={{background:"transparent",border:"none",color:f.c,fontSize:20,fontWeight:800,fontFamily:"monospace",width:"100%",outline:"none",letterSpacing:"-.01em"}}/>
+            <div style={{fontSize:9,color:"var(--t3)",marginTop:2}}>{f.h}</div>
           </div>
         ))}
       </div>
       <div style={{display:"flex",justifyContent:"flex-end"}}>
-        <button onClick={handleSave} style={{background:"var(--teal)",border:"none",color:"var(--bg)",borderRadius:5,padding:"5px 16px",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",letterSpacing:".08em"}}>{zh?"保存设置":"Save Setup"}</button>
+        <button onClick={handleSave} style={{background:"var(--teal)",border:"none",color:"var(--bg)",borderRadius:5,padding:"6px 20px",fontSize:11,fontWeight:800,cursor:"pointer",fontFamily:"inherit",letterSpacing:".08em"}}>{zh?"保存设置":"Save Setup"}</button>
       </div>
     </div>
   );
@@ -413,7 +445,7 @@ export default function App(){
 
   const gexBadge=!gexIsToday
     ?{cls:"red",txt:t("GEX 未设置","GEX not set")}
-    :gex.state==="positive"?{cls:"blue",txt:t("今日 正GEX","Today +GEX")}:{cls:"amber",txt:t("今日 负GEX","Today −GEX")};
+    :gex.state==="positive"?{cls:"blue",txt:t("正GEX","+ GEX")}:{cls:"amber",txt:t("负GEX","− GEX")};
   const badgeColor={red:"var(--red)",blue:"var(--blue)",amber:"var(--amber)"}[gexBadge.cls];
 
   return(
@@ -428,54 +460,60 @@ export default function App(){
         ::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px}
       `}</style>
 
-      <div style={{borderBottom:"2px solid var(--teal)",padding:"9px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap",background:"var(--bg)"}}>
-        <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-          <div style={{fontSize:13,fontWeight:700,letterSpacing:".16em",color:"var(--teal)"}}>SEA TRADING OS</div>
-          <span style={{padding:"2px 9px",borderRadius:20,fontSize:9,fontWeight:700,letterSpacing:".1em",textTransform:"uppercase",border:`1px solid color-mix(in srgb,${badgeColor} 40%,transparent)`,background:`color-mix(in srgb,${badgeColor} 14%,transparent)`,color:badgeColor}}>{gexBadge.txt}</span>
-          <div style={{display:"flex",alignItems:"center",gap:4}}>
-            <div style={{width:6,height:6,borderRadius:"50%",background:status==="live"?"var(--green)":"var(--amber)",animation:status==="live"?"blink 1.6s infinite":"none"}}/>
+      {/* ─── HEADER ─── */}
+      <div style={{borderBottom:"2px solid var(--teal)",padding:"10px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap",background:"var(--bg)"}}>
+        <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+          <div style={{fontSize:15,fontWeight:800,letterSpacing:".18em",color:"var(--teal)"}}>SEA TRADING OS</div>
+          <span style={{padding:"3px 10px",borderRadius:20,fontSize:10,fontWeight:800,letterSpacing:".1em",textTransform:"uppercase",border:`1px solid color-mix(in srgb,${badgeColor} 40%,transparent)`,background:`color-mix(in srgb,${badgeColor} 16%,transparent)`,color:badgeColor}}>{gexBadge.txt}</span>
+          {vix&&<VixBadge vix={vix}/>}
+          <div style={{display:"flex",alignItems:"center",gap:5}}>
+            <div style={{width:7,height:7,borderRadius:"50%",background:status==="live"?"var(--green)":"var(--amber)",animation:status==="live"?"blink 1.6s infinite":"none"}}/>
             <span style={{fontSize:9,color:"var(--t3)",letterSpacing:".1em"}}>{status}</span>
           </div>
         </div>
-        <div style={{display:"flex",alignItems:"center",gap:6}}>
-          <div style={{fontSize:10,color:"var(--t3)",fontFamily:"monospace",letterSpacing:".06em"}}>{clock}</div>
+        <div style={{display:"flex",alignItems:"center",gap:7}}>
+          <div style={{fontSize:11,color:"var(--t2)",fontFamily:"monospace",letterSpacing:".06em",fontWeight:600}}>{clock}</div>
           <Ibtn onClick={toggleTheme}>{dark?"☀":"☾"}</Ibtn>
           <Ibtn onClick={toggleLang}>{zh?"EN":"中"}</Ibtn>
         </div>
       </div>
 
-      <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:1,background:"var(--bd)",borderBottom:"1px solid var(--bd)"}}>
+      {/* ─── TICKER STRIP: 6列大数字 ─── */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",background:"var(--bd)"}}>
         <Tick sym="QQQ" data={ticks.QQQ}/>
         <Tick sym="VIX" data={ticks.VIX}/>
         <Tick sym="SPY" data={ticks.SPY}/>
         <Tick sym="GLD" data={ticks.GLD}/>
         <Tick sym="EUR" label="EUR/USD" data={ticks.EUR}/>
-        <Tick sym="DXY" label="DXY(UUP)" data={ticks.DXY}/>
+        <Tick sym="DXY" label="DXY(UUP)" data={ticks.DXY} style={{borderRight:"none"}}/>
       </div>
 
-      <div style={{display:"flex",gap:2,padding:"8px 14px 0",borderBottom:"1px solid var(--bd)",background:"var(--bg)"}}>
+      {/* ─── TABS ─── */}
+      <div style={{display:"flex",gap:2,padding:"9px 16px 0",borderBottom:"1px solid var(--bd)",background:"var(--bg)"}}>
         {TABS.map((tb,i)=>(
-          <button key={tb.id} onClick={()=>setTab(i)} style={{padding:"6px 13px",borderRadius:"6px 6px 0 0",fontSize:11,fontWeight:700,cursor:"pointer",border:`1px solid ${tab===i?"var(--bd)":"transparent"}`,borderBottom:tab===i?`2px solid ${tb.color}`:"1px solid transparent",background:tab===i?"var(--bg2)":"transparent",color:tab===i?tb.color:"var(--t3)",fontFamily:"inherit",letterSpacing:".06em",marginBottom:tab===i?-1:0}}>
+          <button key={tb.id} onClick={()=>setTab(i)} style={{padding:"7px 15px",borderRadius:"7px 7px 0 0",fontSize:12,fontWeight:700,cursor:"pointer",border:`1px solid ${tab===i?"var(--bd)":"transparent"}`,borderBottom:tab===i?`2px solid ${tb.color}`:"1px solid transparent",background:tab===i?"var(--bg2)":"transparent",color:tab===i?tb.color:"var(--t3)",fontFamily:"inherit",letterSpacing:".06em",marginBottom:tab===i?-1:0}}>
             {zh?tb.labelZh:tb.labelEn}
           </button>
         ))}
       </div>
 
-      <div style={{background:"var(--bg2)",padding:"9px 12px",display:"flex",flexDirection:"column",gap:6}}>
+      {/* ─── CONTENT ─── */}
+      <div style={{background:"var(--bg2)",padding:"10px 14px",display:"flex",flexDirection:"column",gap:8}}>
 
+        {/* === QQQ Options === */}
         {tab===0&&<>
           <GEXPanel zh={zh} gex={gex} onSave={handleSaveGex} isToday={gexIsToday}/>
           <Divider/>
           <div>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
               <SL>{t("开盘前清单","Pre-Market Checklist")}</SL>
-              <div style={{display:"flex",alignItems:"center",gap:6}}><VixZones vix={vix}/><Rbtn onClick={pre.reset}>{t("重置","Reset")}</Rbtn></div>
+              <div style={{display:"flex",alignItems:"center",gap:7}}><VixZones vix={vix}/><Rbtn onClick={pre.reset}>{t("重置","Reset")}</Rbtn></div>
             </div>
             <Checklist items={zh?PRE_ZH:PRE_EN} checks={pre.c} onToggle={pre.toggle} label={t("开盘前检查","Pre-Market Check")} readyText={t("✓ 开盘前检查完毕","✓ Pre-market check complete")}/>
           </div>
           <Divider/>
           <div>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
               <SL>{t("入场清单 · 缺一不可","Entry Checklist · All Required")}</SL>
               <Rbtn onClick={day.reset}>{t("重置","Reset")}</Rbtn>
             </div>
@@ -490,17 +528,18 @@ export default function App(){
           <div><SL>{t("铁律","Iron Rules")}</SL><Rules items={zh?RULES_OPT_ZH:RULES_OPT_EN} hotIdx={[7]}/></div>
         </>}
 
+        {/* === Equities === */}
         {tab===1&&<>
           <div>
             <SL>{t("美股正股 · 低频配置系统","US Equities · Low-Frequency System")}</SL>
-            <div style={{background:`color-mix(in srgb,var(--violet) 8%,transparent)`,border:`1px solid color-mix(in srgb,var(--violet) 30%,transparent)`,borderRadius:6,padding:"9px 11px",fontSize:10,color:"var(--t2)",lineHeight:1.6,marginBottom:8}}>
+            <div style={{background:`color-mix(in srgb,var(--violet) 8%,transparent)`,border:`1px solid color-mix(in srgb,var(--violet) 30%,transparent)`,borderRadius:7,padding:"10px 13px",fontSize:11,color:"var(--t2)",lineHeight:1.65,marginBottom:9}}>
               {t("底仓系统，非当前主战场。先筛公司质量，再等技术位置，低频持有。不做日内，不追热点。","Foundation system — not the primary battleground. Screen quality first, wait for technical levels, hold low-frequency. No intraday, no hype-chasing.")}
             </div>
             <StepRail color="var(--violet)" steps={[{n:t("第一步","Step 1"),t:t("基本面筛选","Fundamental Screen"),d:t("营收/利润连续增长 · 行业景气 · 无重大负面","Consistent revenue/profit growth · positive sector · no major negatives")},{n:t("第二步","Step 2"),t:t("技术择时","Technical Timing"),d:t("周线趋势不坏 · 关键支撑 · 突破回踩日线确认","Weekly trend intact · key support · breakout pullback + daily confirm")},{n:t("第三步","Step 3"),t:t("持仓管理","Position Management"),d:t("周线级别持有 · 结构下方止损 · 不摊平下跌","Weekly timeframe hold · stop below structure · never average down")}]}/>
           </div>
           <Divider/>
           <div>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
               <SL>{t("正股入场清单","Stock Entry Checklist")}</SL>
               <Rbtn onClick={sc.reset}>{t("重置","Reset")}</Rbtn>
             </div>
@@ -509,11 +548,11 @@ export default function App(){
           <Divider/>
           <div>
             <SL>{t("VIX 宏观过滤","VIX Macro Filter")}</SL>
-            <div style={{display:"flex",gap:5}}>
+            <div style={{display:"flex",gap:6}}>
               {[{r:t("VIX<15","VIX<15"),n:t("低波·低成本·正常参与","Low vol·low cost·normal"),c:"var(--green)",a:vix&&vix<15},{r:t("15–25","15–25"),n:t("正常执行，全力参与","Normal — full participation"),c:"var(--blue)",a:vix&&vix>=15&&vix<25},{r:t("25–35","25–35"),n:t("降低仓位，提高目标","Reduce size · raise targets"),c:"var(--amber)",a:vix&&vix>=25&&vix<35},{r:t(">35 跳过",">35 skip"),n:t("方向混沌，不参与","Direction chaotic — stay out"),c:"var(--red)",a:vix&&vix>=35}].map(z=>(
-                <div key={z.r} style={{flex:1,borderRadius:5,border:`1px solid ${z.a?"color-mix(in srgb,"+z.c+" 40%,transparent)":"var(--bd)"}`,padding:"6px 8px",background:z.a?`color-mix(in srgb,${z.c} 10%,transparent)`:"var(--bg3)",opacity:z.a?1:.5,transition:"all .2s"}}>
-                  <div style={{fontSize:9,fontWeight:700,color:z.c,marginBottom:2}}>{z.r}</div>
-                  <div style={{fontSize:9,color:"var(--t2)",lineHeight:1.4}}>{z.n}</div>
+                <div key={z.r} style={{flex:1,borderRadius:6,border:`1px solid ${z.a?"color-mix(in srgb,"+z.c+" 40%,transparent)":"var(--bd)"}`,padding:"8px 10px",background:z.a?`color-mix(in srgb,${z.c} 10%,transparent)`:"var(--bg3)",opacity:z.a?1:.5,transition:"all .2s"}}>
+                  <div style={{fontSize:11,fontWeight:800,color:z.c,marginBottom:3}}>{z.r}</div>
+                  <div style={{fontSize:10,color:"var(--t2)",lineHeight:1.4}}>{z.n}</div>
                 </div>
               ))}
             </div>
@@ -522,25 +561,26 @@ export default function App(){
           <div><SL>{t("执行铁律","Iron Rules")}</SL><Rules items={zh?RULES_STOCK_ZH:RULES_STOCK_EN}/></div>
         </>}
 
+        {/* === Gold === */}
         {tab===2&&<>
           <div>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:4}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:5}}>
               <SL>{t("黄金 XAU/USD · 紧凑执行系统","Gold XAU/USD · Compact Execution System")}</SL>
-              <span style={{fontSize:9,color:"var(--amber)",letterSpacing:".08em",fontWeight:700}}>{t("宏观→结构→时间→确认","Macro→Structure→Time→Confirm")}</span>
+              <span style={{fontSize:10,color:"var(--amber)",letterSpacing:".08em",fontWeight:700}}>{t("宏观→结构→时间→确认","Macro→Structure→Time→Confirm")}</span>
             </div>
             <StepRail color="var(--amber)" steps={[{n:"D/4H",t:t("定向+找位","Bias + Level"),d:t("DXY/实际利率 + OB/FVG/POC重叠","DXY/real rates + OB/FVG/POC confluence")},{n:"KZ",t:t("只等窗口","Only Window"),d:t("伦敦15–17 / 纽约21:30–23:30","London 15–17 / NY 21:30–23:30 BJ")},{n:"5M/15M",t:t("确认入场","Confirm"),d:t("CHoCH/BOS + 拒绝 + 收回结构","CHoCH/BOS + rejection + reclaim")},{n:t("风控","Risk"),t:t("只拿中段","Middle Leg"),d:t("止损结构外 · RR≥1:2","Stop outside · RR≥1:2")}]}/>
           </div>
 
-          <div style={{display:"grid",gridTemplateColumns:"1.05fr .95fr",gap:6,alignItems:"start"}}>
+          <div style={{display:"grid",gridTemplateColumns:"1.05fr .95fr",gap:7,alignItems:"start"}}>
             <div>
               <SL>{t("宏观过滤 · DXY + 实际利率","Macro Filter · DXY + Real Rates")}</SL>
-              <div style={{display:"flex",flexDirection:"column",gap:3}}>
+              <div style={{display:"flex",flexDirection:"column",gap:4}}>
                 {(zh?MACRO_GOLD_ZH:MACRO_GOLD_EN).map((item,i)=>{
                   const col={green:"var(--green)",blue:"var(--blue)",slate:"var(--t3)",amber:"var(--amber)",red:"var(--red)"}[item.c];
                   return(
-                    <div key={i} style={{display:"flex",alignItems:"center",gap:6,padding:"4px 7px",borderRadius:5,border:`1px solid ${i===4?"color-mix(in srgb,var(--red) 25%,transparent)":"var(--bd)"}`,background:i===4?"color-mix(in srgb,var(--red) 6%,transparent)":"var(--bg3)"}}>
-                      <div style={{fontSize:9,fontWeight:700,flex:1,color:col}}>{item.s}</div>
-                      <div style={{fontSize:8,color:"var(--t2)",textAlign:"right"}}>{item.a}</div>
+                    <div key={i} style={{display:"flex",alignItems:"center",gap:7,padding:"6px 10px",borderRadius:5,border:`1px solid ${i===4?"color-mix(in srgb,var(--red) 28%,transparent)":"var(--bd)"}`,background:i===4?"color-mix(in srgb,var(--red) 7%,transparent)":"var(--bg3)"}}>
+                      <div style={{fontSize:11,fontWeight:700,flex:1,color:col}}>{item.s}</div>
+                      <div style={{fontSize:10,color:"var(--t2)",textAlign:"right"}}>{item.a}</div>
                     </div>
                   );
                 })}
@@ -548,13 +588,13 @@ export default function App(){
             </div>
             <div>
               <SL>{t("Kill Zone 时间窗口","Kill Zones")}</SL>
-              <KZGrid zones={[{title:t("伦敦","London"),time:"15:00–17:00",note:t("扫亚洲高低 · 定日内方向","Sweep Asia · set direction"),c:"var(--amber)"},{title:t("纽约","New York"),time:"21:30–23:30",note:t("扫伦敦后走主段","Sweep London · main leg"),c:"var(--blue)"},{title:t("禁区","Banned"),time:t("亚盘中间位","Asian Mid"),note:t("不追 · 数据瞬间不进","No chase · no data spike"),c:"var(--red)"}]}/>
+              <KZGrid zones={[{title:t("伦敦","London"),time:"15:00–17:00",note:t("扫亚洲高低 · 定日内方向","Sweep Asia · set direction"),c:"var(--amber)"},{title:t("纽约","New York"),time:"21:30–23:30",note:t("扫伦敦后走主段","Sweep London · main leg"),c:"var(--blue)"},{title:t("禁区","Banned"),time:t("亚盘中间","Asian Mid"),note:t("不追 · 数据瞬间不进","No chase · no data spike"),c:"var(--red)"}]}/>
             </div>
           </div>
 
-          <div style={{display:"grid",gridTemplateColumns:"1.25fr .75fr",gap:6,alignItems:"start"}}>
+          <div style={{display:"grid",gridTemplateColumns:"1.25fr .75fr",gap:7,alignItems:"start"}}>
             <div>
-              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5}}>
                 <SL>{t("黄金入场清单","Gold Entry Checklist")}</SL>
                 <Rbtn onClick={gold.reset}>{t("重置","Reset")}</Rbtn>
               </div>
@@ -564,10 +604,11 @@ export default function App(){
           </div>
         </>}
 
+        {/* === EUR/USD === */}
         {tab===3&&<>
           <div>
             <SL>{t("EUR/USD · 趋势跟踪系统","EUR/USD · Trend-Following System")}</SL>
-            <div style={{background:`color-mix(in srgb,var(--blue) 8%,transparent)`,border:`1px solid color-mix(in srgb,var(--blue) 30%,transparent)`,borderRadius:6,padding:"9px 11px",fontSize:10,color:"var(--t2)",lineHeight:1.6,marginBottom:8}}>
+            <div style={{background:`color-mix(in srgb,var(--blue) 8%,transparent)`,border:`1px solid color-mix(in srgb,var(--blue) 30%,transparent)`,borderRadius:7,padding:"10px 13px",fontSize:11,color:"var(--t2)",lineHeight:1.65,marginBottom:9}}>
               {t("EMA顺排 + ADX>25确认趋势环境 → Kill Zone回踩结构位等确认 → 只拿中间段。ADX<20 + 均线缠绕时系统无效，不做。","EMA aligned + ADX>25 confirms trend → Kill Zone pullback to structure for entry → take middle leg only. ADX<20 + tangled EMAs = system invalid.")}
             </div>
             <StepRail color="var(--blue)" steps={[{n:"Step 1",t:t("趋势过滤","Trend Filter"),d:t("EMA 9/21/55顺排 + ADX>25，先确认趋势环境","EMA 9/21/55 aligned + ADX>25 — confirm trend first")},{n:"Step 2",t:"Kill Zone",d:t("伦敦/纽约开盘窗口，扫前高低点后定方向","London/NY open — sweep prior levels then set direction")},{n:"Step 3",t:t("找回踩位","Find Pullback"),d:t("回踩EMA21或关键结构位，等拒绝K线确认","Pullback to EMA21 or key structure, wait for rejection candle")},{n:"Step 4",t:t("执行","Execute"),d:t("RR≥1:2 · 到1:1.5先锁一半 · 不追第一根破位","RR ≥ 1:2 · lock 50% at 1:1.5 · never chase the first breakout candle")}]}/>
@@ -579,7 +620,7 @@ export default function App(){
           </div>
           <Divider/>
           <div>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
               <SL>{t("EUR/USD 入场清单","EUR/USD Entry Checklist")}</SL>
               <Rbtn onClick={eur.reset}>{t("重置","Reset")}</Rbtn>
             </div>
@@ -589,8 +630,8 @@ export default function App(){
           <div><SL>{t("执行铁律","Iron Rules")}</SL><Rules items={zh?RULES_EUR_ZH:RULES_EUR_EN} hotIdx={[0]}/></div>
         </>}
 
-        <div style={{textAlign:"center",paddingTop:8}}>
-          <div style={{fontSize:9,color:"var(--t3)",letterSpacing:".15em"}}>SEA TRADING OS v7.3 · compact layout · 弱水三千，只取一瓢 · 先活下来，再赚钱</div>
+        <div style={{textAlign:"center",paddingTop:6}}>
+          <div style={{fontSize:9,color:"var(--t3)",letterSpacing:".15em"}}>SEA TRADING OS v7.4 · visual upgrade · 弱水三千，只取一瓢 · 先活下来，再赚钱</div>
         </div>
       </div>
     </ThemeProvider>
