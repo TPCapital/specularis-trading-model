@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from "react";
 function ls(k,d){try{var v=localStorage.getItem(k);return v!==null?v:d}catch(e){return d}}
 function lsSet(k,v){try{localStorage.setItem(k,v)}catch(e){}}
 const TODAY=new Date().toDateString();
-const BUILD_ID="v7.4.4 pixel alignment audit · 2026-06-17";
+const BUILD_ID="v7.5.0 macro bar · yields + calendar · 2026-06-18";
 
 const PRE_ZH=[
   {t:"今日有无重大数据（FOMC/CPI/NFP）发布？",w:"有 → 降低预期或跳过当天"},
@@ -191,12 +191,128 @@ function useClock(){
   },[]);
   return t;
 }
+function useMacro(){
+  const [macro,setMacro]=useState(null);
+  const [macroStatus,setMacroStatus]=useState("loading");
+  const fetchMacro=useCallback(async()=>{
+    try{
+      const r=await fetch("/api/macro");
+      if(!r.ok){setMacroStatus("error");return;}
+      const d=await r.json();
+      setMacro(d);setMacroStatus("ok");
+    }catch(e){setMacroStatus("error");}
+  },[]);
+  useEffect(()=>{fetchMacro();const id=setInterval(fetchMacro,180000);return()=>clearInterval(id);},[fetchMacro]);
+  return{macro,macroStatus};
+}
 
 const C={
   teal:"#10d9b8",red:"#f87171",amber:"#fbbf24",blue:"#60a5fa",green:"#34d399",violet:"#a78bfa",coral:"#f97316",
 };
 const darkVars={bg:"#0d1117",bg2:"#161b27",bg3:"#1c2333",bg4:"#242e42",t1:"rgba(255,255,255,0.92)",t2:"rgba(255,255,255,0.55)",t3:"rgba(255,255,255,0.28)",bd:"rgba(255,255,255,0.09)",bd2:"rgba(255,255,255,0.18)"};
 const lightVars={bg:"#f8f9fb",bg2:"#ffffff",bg3:"#f0f2f5",bg4:"#e8eaf0",t1:"#0f1117",t2:"#4a5568",t3:"#9aa3b3",bd:"rgba(0,0,0,0.08)",bd2:"rgba(0,0,0,0.16)"};
+
+// ─── MACRO BAR: yields + economic calendar ───────────────────────────────────
+function YieldCell({label,yld,warn}){
+  if(!yld)return(
+    <div style={{display:"flex",flexDirection:"column",gap:2,padding:"6px 14px",borderRight:"1px solid var(--bd)"}}>
+      <div style={{fontSize:9,letterSpacing:".12em",color:"var(--t3)",fontWeight:700,textTransform:"uppercase"}}>{label}</div>
+      <div style={{fontSize:16,fontWeight:800,fontFamily:"monospace",color:"var(--bg4)"}}>—</div>
+    </div>
+  );
+  const col=warn?yld.chg>0?"var(--red)":"var(--green)":"var(--t2)";
+  const chgCol=yld.chg>0?"var(--red)":yld.chg<0?"var(--green)":"var(--t3)";
+  return(
+    <div style={{display:"flex",flexDirection:"column",gap:2,padding:"6px 14px",borderRight:"1px solid var(--bd)"}}>
+      <div style={{fontSize:9,letterSpacing:".12em",color:"var(--t3)",fontWeight:700,textTransform:"uppercase"}}>{label}</div>
+      <div style={{display:"flex",alignItems:"baseline",gap:5}}>
+        <div style={{fontSize:18,fontWeight:800,fontFamily:"monospace",color:col,lineHeight:1}}>{yld.price.toFixed(2)}<span style={{fontSize:10,color:"var(--t3)",fontWeight:400}}>%</span></div>
+        <span style={{fontSize:10,fontWeight:700,color:chgCol}}>{yld.chg>=0?"+":""}{yld.chg.toFixed(2)}</span>
+      </div>
+    </div>
+  );
+}
+
+function EventBadge({ev,zh}){
+  const riskColor={extreme:"var(--red)",high:"var(--amber)",medium:"var(--blue)"}[ev.risk]||"var(--t3)";
+  const labelZh={FOMC:"FOMC利率",CPI:"CPI通胀",NFP:"非农",PPI:"PPI",GDP:"GDP",PCE:"PCE"}[ev.key]||ev.key;
+  const warnZh={extreme:"极高风险 · 考虑跳过",high:"高风险 · 降低预期",medium:"中风险 · 注意时间"}[ev.risk]||"";
+  const warnEn={extreme:"Extreme risk · consider skip",high:"High risk · lower expectations",medium:"Medium risk · watch timing"}[ev.risk]||"";
+  return(
+    <div style={{display:"flex",alignItems:"center",gap:6,padding:"4px 11px",borderRadius:5,border:`1px solid color-mix(in srgb,${riskColor} 40%,transparent)`,background:`color-mix(in srgb,${riskColor} 12%,transparent)`}}>
+      <span style={{fontSize:13}}>{ev.emoji}</span>
+      <div>
+        <div style={{fontSize:11,fontWeight:800,color:riskColor,letterSpacing:".06em"}}>{zh?labelZh:ev.key}</div>
+        <div style={{fontSize:9,color:"var(--t2)",marginTop:1,letterSpacing:".04em"}}>{zh?warnZh:warnEn}</div>
+      </div>
+    </div>
+  );
+}
+
+function MacroBar({macro,zh}){
+  const riskColors={extreme:"var(--red)",high:"var(--amber)",medium:"var(--blue)",clear:"var(--green)"};
+  const riskLabels={
+    extreme:{zh:"⚠ 极高风险日 · 建议跳过或大幅缩仓",en:"⚠ Extreme Risk Day · skip or drastically reduce"},
+    high:{zh:"⚡ 高风险数据日 · 降低仓位预期",en:"⚡ High Risk Data Day · lower expectations"},
+    medium:{zh:"📌 中级数据日 · 注意发布时间",en:"📌 Medium Risk Day · watch release time"},
+    clear:{zh:"✓ 今日无重大数据发布",en:"✓ No major data releases today"},
+  };
+  const loading=!macro;
+  return(
+    <div style={{borderBottom:"1px solid var(--bd)",background:"var(--bg3)",display:"flex",alignItems:"stretch",flexWrap:"wrap",minHeight:52}}>
+      {/* Section label */}
+      <div style={{display:"flex",alignItems:"center",padding:"0 14px",borderRight:"1px solid var(--bd)",minWidth:72,flexShrink:0}}>
+        <div style={{fontSize:8,letterSpacing:".18em",color:"var(--t3)",fontWeight:700,textTransform:"uppercase",lineHeight:1.4}}>MACRO<br/>DATA</div>
+      </div>
+
+      {/* Yield cells */}
+      <YieldCell label="5Y YIELD" yld={loading?null:macro.yields?.y5} warn/>
+      <YieldCell label="10Y YIELD" yld={loading?null:macro.yields?.y10} warn/>
+      <YieldCell label="30Y YIELD" yld={loading?null:macro.yields?.y30}/>
+
+      {/* Spread 10Y-5Y */}
+      {!loading&&macro.yields?.y10&&macro.yields?.y5&&(()=>{
+        const spread=macro.yields.y10.price-macro.yields.y5.price;
+        const col=spread>=0?"var(--green)":"var(--red)";
+        return(
+          <div style={{display:"flex",flexDirection:"column",gap:2,padding:"6px 14px",borderRight:"1px solid var(--bd)"}}>
+            <div style={{fontSize:9,letterSpacing:".12em",color:"var(--t3)",fontWeight:700,textTransform:"uppercase"}}>{zh?"10Y-5Y利差":"10Y-5Y SPREAD"}</div>
+            <div style={{display:"flex",alignItems:"baseline",gap:4}}>
+              <div style={{fontSize:18,fontWeight:800,fontFamily:"monospace",color:col,lineHeight:1}}>{spread>=0?"+":""}{spread.toFixed(2)}<span style={{fontSize:10,color:"var(--t3)",fontWeight:400}}>%</span></div>
+              <span style={{fontSize:9,color:"var(--t3)"}}>{spread>=0?(zh?"正常曲线":"Normal"):(zh?"倒挂警告":"Inverted ⚠")}</span>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Calendar events / day status */}
+      <div style={{flex:1,display:"flex",alignItems:"center",gap:7,padding:"8px 14px",flexWrap:"wrap",minWidth:200}}>
+        {loading?(
+          <div style={{fontSize:10,color:"var(--t3)",letterSpacing:".08em"}}>{zh?"加载宏观数据…":"Loading macro data…"}</div>
+        ):macro.events.length===0?(
+          <div style={{display:"flex",alignItems:"center",gap:8,padding:"5px 12px",borderRadius:5,border:"1px solid color-mix(in srgb,var(--green) 30%,transparent)",background:"color-mix(in srgb,var(--green) 8%,transparent)"}}>
+            <span style={{fontSize:13}}>✅</span>
+            <div>
+              <div style={{fontSize:11,fontWeight:800,color:"var(--green)",letterSpacing:".06em"}}>{zh?"今日无重大数据":"No Major Releases Today"}</div>
+              <div style={{fontSize:9,color:"var(--t2)",marginTop:1}}>{zh?"交易环境清晰，正常执行系统":"Clean trading environment"}</div>
+            </div>
+          </div>
+        ):(
+          macro.events.map(ev=><EventBadge key={ev.key} ev={ev} zh={zh}/>)
+        )}
+      </div>
+
+      {/* Risk summary pill if events exist */}
+      {!loading&&macro.events.length>0&&(
+        <div style={{display:"flex",alignItems:"center",padding:"0 14px",borderLeft:"1px solid var(--bd)",flexShrink:0}}>
+          <div style={{padding:"5px 12px",borderRadius:20,fontSize:9,fontWeight:800,letterSpacing:".1em",border:`1px solid color-mix(in srgb,${riskColors[macro.dayRisk]} 40%,transparent)`,background:`color-mix(in srgb,${riskColors[macro.dayRisk]} 15%,transparent)`,color:riskColors[macro.dayRisk],textAlign:"center",lineHeight:1.4,maxWidth:140}}>
+            {(zh?riskLabels[macro.dayRisk]?.zh:riskLabels[macro.dayRisk]?.en)||macro.dayRisk.toUpperCase()}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function ThemeProvider({dark,children}){
   const v=dark?darkVars:lightVars;
@@ -433,6 +549,7 @@ export default function App(){
   const {zh,toggle:toggleLang}=useLang();
   const {gex,save:saveGex,isToday:gexIsToday}=useGEX();
   const {ticks,status}=useQuotes();
+  const {macro}=useMacro();
   const clock=useClock();
   const [tab,setTab]=useState(0);
   const pre=useChecks("pre");
@@ -493,6 +610,9 @@ export default function App(){
         <Tick sym="EUR" label="EUR/USD" data={ticks.EUR}/>
         <Tick sym="DXY" label="DXY(UUP)" data={ticks.DXY} style={{borderRight:"none"}}/>
       </div>
+
+      {/* ─── MACRO BAR: yields + calendar ─── */}
+      <MacroBar macro={macro} zh={zh}/>
 
       {/* ─── TABS ─── */}
       <div style={{display:"flex",gap:2,padding:"9px 16px 0",borderBottom:"1px solid var(--bd)",background:"var(--bg)"}}>
@@ -618,7 +738,7 @@ export default function App(){
         </>}
 
         <div style={{textAlign:"center",paddingTop:6}}>
-          <div style={{fontSize:9,color:"var(--t3)",letterSpacing:".15em"}}>SEA TRADING OS v7.4.4 · pixel alignment audit · visual upgrade · 弱水三千，只取一瓢 · 先活下来，再赚钱</div>
+          <div style={{fontSize:9,color:"var(--t3)",letterSpacing:".15em"}}>SEA TRADING OS v7.5.0 · macro bar · yields + calendar · 弱水三千，只取一瓢 · 先活下来，再赚钱</div>
         </div>
       </div>
     </ThemeProvider>
