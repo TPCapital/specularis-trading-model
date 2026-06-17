@@ -26,7 +26,7 @@ export default async function handler(req, res) {
   try {
     const r = await fetchWithTimeout(url, {
       headers: {
-        "User-Agent": "Mozilla/5.0 Sea-Trading-OS/7.5.2",
+        "User-Agent": "Mozilla/5.0 Sea-Trading-OS/7.6.3",
         "Accept": "application/json"
       }
     });
@@ -47,8 +47,8 @@ export default async function handler(req, res) {
     const chg = Number.isFinite(prev) ? price - prev : 0;
     const pct = Number.isFinite(prev) && prev !== 0 ? (chg / prev) * 100 : 0;
 
-    return send(res, { symbol, price, chg, pct, source: "yahoo-chart", build: "v7.5.2" }, 200, 45);
+    return send(res, { symbol, price, chg, pct, source: "yahoo-chart", build: "v7.6.3" }, 200, 45);
   } catch (e) {
-    return send(res, { error: "fetch timeout/fallback", symbol, message: e?.name || e?.message || String(e), build: "v7.5.2" }, 200, 15);
+    return send(res, { error: "fetch timeout/fallback", symbol, message: e?.name || e?.message || String(e), build: "v7.6.3" }, 200, 15);
   }
 }

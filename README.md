@@ -7,7 +7,7 @@
 *系统高于感觉，纪律高于判断*  
 *System over instinct. Discipline over judgment.*
 
-[![Version](https://img.shields.io/badge/version-v7.6.0-10d9b8?style=flat-square)](.)
+[![Version](https://img.shields.io/badge/version-v7.6.3-10d9b8?style=flat-square)](.)
 [![Stack](https://img.shields.io/badge/stack-React_18_+_Vite_4-60a5fa?style=flat-square)](.)
 [![Deploy](https://img.shields.io/badge/deploy-Vercel-ffffff?style=flat-square&logo=vercel)](.)
 [![Lang](https://img.shields.io/badge/bilingual-中文_/_EN-a78bfa?style=flat-square)](.)
@@ -287,9 +287,8 @@ npm run dev
 
 | 版本 | 主要更新 |
 |------|----------|
-| **v7.6.0** | 风险日历新增月度 OPEX、四巫日（Quad Witching）、10Y/30Y 国债竞标日；开盘前清单和入场清单同步更新 |
-| **v7.5.2** | Vercel 部署修复（package-lock.json 清理）；宏观数据栏稳定版 |
-| **v7.5.x** | 实时宏观数据栏（收益率 + FOMC/CPI/NFP 日历）；API 从 Edge 切换至 Node Serverless |
+| **v7.6.3** | 风险日历新增月度 OPEX、四巫日（Quad Witching）、10Y/30Y 国债竞标日；开盘前清单和入场清单同步更新 |
+| **v7.6.3** | Vercel 部署修复（package-lock.json 清理）；宏观数据栏稳定版 |
 | **v5.5** | 深色 / 浅色主题切换；完整中英双语支持 |
 | **v5.x** | GEX 面板集成（Gamma Flip / Call Wall / Put Wall / Vol Trigger）；0DTE 教育内容 |
 

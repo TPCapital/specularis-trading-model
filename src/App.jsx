@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from "react";
 function ls(k,d){try{var v=localStorage.getItem(k);return v!==null?v:d}catch(e){return d}}
 function lsSet(k,v){try{localStorage.setItem(k,v)}catch(e){}}
 const TODAY=new Date().toDateString();
-const BUILD_ID="v7.6.0 · OPEX+Witching+Treasury · 2026-06-18";
+const BUILD_ID="v7.6.4 · Macro Matrix · OPEX+Witching+Treasury · 2026-06-18";
 
 const PRE_ZH=[
   {t:"今日有无重大数据（FOMC/CPI/NFP）发布？",w:"有 → 降低预期或跳过当天"},
@@ -130,18 +130,106 @@ const RULES_EUR_ZH=["ADX<20 + 均线缠绕 → 系统无效，不做","等Kill Z
 const RULES_EUR_EN=["ADX<20 + tangled EMAs → system invalid","Wait for Kill Zone sweep before direction","Pullback to EMA21/structure, wait for rejection","Never chase the first breakout candle","RR ≥ 1:2; lock 50% at 1:1.5","No entries within 15 min of major data release"];
 
 const MACRO_GOLD_ZH=[
-  {s:"实际利率↓ + DXY↓",a:"最友好环境，主动做多",c:"green"},
-  {s:"单向利多（其一）",a:"偏多，需结构确认",c:"blue"},
-  {s:"双向平稳",a:"中性，用SMC结构确认方向",c:"slate"},
-  {s:"单向压制（其一）",a:"谨慎，降仓，等更好位置",c:"amber"},
-  {s:"实际利率↑ + DXY↑",a:"禁止做多，宏观双向压制",c:"red"},
+  {
+    level:"A+",
+    s:"实际利率↓ + DXY↓",
+    why:"持有黄金机会成本下降（利率↓）+ 以美元计价的黄金变相升值（美元↓）",
+    a:"最优做多环境 · 主动寻找入场",
+    c:"green"
+  },
+  {
+    level:"B",
+    s:"实际利率↓ + DXY持平/小↑",
+    why:"利率驱动仍在，但美元轻微阻力抵消部分涨幅",
+    a:"偏多 · 需日线结构确认后入场",
+    c:"blue"
+  },
+  {
+    level:"B",
+    s:"实际利率持平/小↑ + DXY↓",
+    why:"美元走弱提供外部支撑，但利率端尚无助推",
+    a:"偏多 · 等Kill Zone流动性扫出再入",
+    c:"blue"
+  },
+  {
+    level:"C",
+    s:"实际利率持平 + DXY持平",
+    why:"两大驱动均缺席，黄金靠结构内部动能运行",
+    a:"中性 · 只做SMC结构内的高胜率回踩",
+    c:"slate"
+  },
+  {
+    level:"D",
+    s:"实际利率↑ + DXY持平/小↓",
+    why:"持有成本上升压制黄金，即便美元未走强",
+    a:"谨慎 · 缩仓 · 等实际利率见顶信号",
+    c:"amber"
+  },
+  {
+    level:"D",
+    s:"实际利率持平/小↑ + DXY↑",
+    why:"美元走强直接压制黄金定价，双重阻力之一",
+    a:"谨慎 · 缩仓 · 等DXY见顶转弱确认",
+    c:"amber"
+  },
+  {
+    level:"X",
+    s:"实际利率↑ + DXY↑",
+    why:"两大压制同时激活：持有成本↑ + 美元计价贬值，历史上黄金最差的宏观组合",
+    a:"禁止做多 · 系统无效 · 等宏观转向",
+    c:"red"
+  },
 ];
 const MACRO_GOLD_EN=[
-  {s:"Real rates↓ + DXY↓",a:"Most favorable — actively seek longs",c:"green"},
-  {s:"Single tailwind (either)",a:"Bullish bias — require confirmation",c:"blue"},
-  {s:"Both stable",a:"Neutral — use SMC to confirm direction",c:"slate"},
-  {s:"Single headwind (either)",a:"Caution — reduce size, wait for better",c:"amber"},
-  {s:"Real rates↑ + DXY↑",a:"NO longs — dual macro headwind",c:"red"},
+  {
+    level:"A+",
+    s:"Real rates↓ + DXY↓",
+    why:"Lower opportunity cost (rates↓) + weaker USD inflates gold's dollar price",
+    a:"Best long environment · actively seek entries",
+    c:"green"
+  },
+  {
+    level:"B",
+    s:"Real rates↓ + DXY flat/slightly↑",
+    why:"Rate tailwind intact, mild USD resistance offsets some upside",
+    a:"Bullish bias · require daily structure confirm",
+    c:"blue"
+  },
+  {
+    level:"B",
+    s:"Real rates flat/slightly↑ + DXY↓",
+    why:"Weak USD provides external support, rate driver absent",
+    a:"Bullish bias · wait for Kill Zone liquidity sweep",
+    c:"blue"
+  },
+  {
+    level:"C",
+    s:"Real rates flat + DXY flat",
+    why:"Both macro drivers absent — gold moves on internal structure only",
+    a:"Neutral · only high-probability SMC pullbacks",
+    c:"slate"
+  },
+  {
+    level:"D",
+    s:"Real rates↑ + DXY flat/slightly↓",
+    why:"Rising holding cost suppresses gold even without a strong USD",
+    a:"Caution · reduce size · wait for rates to peak",
+    c:"amber"
+  },
+  {
+    level:"D",
+    s:"Real rates flat/slightly↑ + DXY↑",
+    why:"Strong USD directly reprices gold lower — one headwind active",
+    a:"Caution · reduce size · wait for DXY reversal",
+    c:"amber"
+  },
+  {
+    level:"X",
+    s:"Real rates↑ + DXY↑",
+    why:"Both headwinds active simultaneously: cost of holding rises + USD reprices gold down — historically the worst macro combination",
+    a:"NO longs · system invalid · wait for macro shift",
+    c:"red"
+  },
 ];
 
 function useTheme(){
@@ -738,13 +826,27 @@ export default function App(){
 
           <PairGrid>
             <StrictCol title={t("宏观过滤 · DXY + 实际利率","Macro Filter · DXY + Real Rates")}>
-              <div style={{display:"flex",flexDirection:"column",gap:4,height:"100%"}}>
+              <div style={{display:"flex",flexDirection:"column",gap:5,height:"100%"}}>
                 {(zh?MACRO_GOLD_ZH:MACRO_GOLD_EN).map((item,i)=>{
                   const col={green:"var(--green)",blue:"var(--blue)",slate:"var(--t3)",amber:"var(--amber)",red:"var(--red)"}[item.c];
+                  const bgAlpha={green:0.07,blue:0.06,slate:0.0,amber:0.06,red:0.08}[item.c];
+                  const rgb={green:"52,211,153",blue:"96,165,250",slate:"255,255,255",amber:"251,191,36",red:"248,113,113"}[item.c];
+                  const levelColor={green:"var(--green)",blue:"var(--blue)",slate:"var(--t3)",amber:"var(--amber)",red:"var(--red)"}[item.c];
                   return(
-                    <div key={i} style={{display:"flex",alignItems:"center",gap:7,padding:"6px 10px",borderRadius:5,border:`1px solid ${i===4?"rgba(248,113,113,0.28)":"var(--bd)"}`,background:i===4?"rgba(248,113,113,0.07)":"var(--bg3)",minHeight:34}}>
-                      <div style={{fontSize:11,fontWeight:700,flex:1,color:col,minWidth:0,wordBreak:"break-word"}}>{item.s}</div>
-                      <div style={{fontSize:10,color:"var(--t2)",textAlign:"right",minWidth:0,wordBreak:"break-word"}}>{item.a}</div>
+                    <div key={i} style={{padding:"8px 10px",borderRadius:6,border:`1px solid rgba(${rgb},${bgAlpha>0?0.25:0.08})`,background:`rgba(${rgb},${bgAlpha})`,display:"flex",flexDirection:"column",gap:4}}>
+                      {/* Row 1: level badge + condition */}
+                      <div style={{display:"flex",alignItems:"center",gap:7}}>
+                        <span style={{fontSize:9,fontWeight:800,letterSpacing:".1em",padding:"1px 6px",borderRadius:3,border:`1px solid rgba(${rgb},0.4)`,color:levelColor,flexShrink:0,lineHeight:1.6}}>{item.level}</span>
+                        <span style={{fontSize:12,fontWeight:800,color:col,letterSpacing:".02em"}}>{item.s}</span>
+                      </div>
+                      {/* Row 2: mechanism */}
+                      <div style={{fontSize:10,color:"var(--t2)",lineHeight:1.5,paddingLeft:2}}>
+                        <span style={{color:"var(--t3)",fontSize:9,marginRight:4}}>{zh?"原因：":"Why:"}</span>{item.why}
+                      </div>
+                      {/* Row 3: action */}
+                      <div style={{fontSize:10,fontWeight:700,color:col,paddingLeft:2,borderTop:"1px solid var(--bd)",paddingTop:3,marginTop:1}}>
+                        {zh?"→ ":"→ "}{item.a}
+                      </div>
                     </div>
                   );
                 })}
@@ -787,7 +889,7 @@ export default function App(){
         </>}
 
         <div style={{textAlign:"center",paddingTop:6}}>
-          <div style={{fontSize:9,color:"var(--t3)",letterSpacing:".15em"}}>SEA TRADING OS v7.6.0 · OPEX+Witching+Treasury · 弱水三千，只取一瓢 · 先活下来，再赚钱</div>
+          <div style={{fontSize:9,color:"var(--t3)",letterSpacing:".15em"}}>SEA TRADING OS v7.6.4 · MACRO MATRIX · OPEX+WITCHING+TREASURY · 弱水三千，只取一瓢 · 先活下来，再赚钱</div>
         </div>
       </div>
     </ThemeProvider>
