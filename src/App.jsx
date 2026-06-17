@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from "react";
 function ls(k,d){try{var v=localStorage.getItem(k);return v!==null?v:d}catch(e){return d}}
 function lsSet(k,v){try{localStorage.setItem(k,v)}catch(e){}}
 const TODAY=new Date().toDateString();
-const BUILD_ID="v7.5.2 vercel clean · macro bar · 2026-06-18";
+const BUILD_ID="v7.6.0 · OPEX+Witching+Treasury · 2026-06-18";
 
 const PRE_ZH=[
   {t:"今日有无重大数据（FOMC/CPI/NFP）发布？",w:"有 → 降低预期或跳过当天"},
@@ -11,6 +11,7 @@ const PRE_ZH=[
   {t:"QQQ IV Rank是否高于50%？",w:"是 → 需更大方向移动才盈利"},
   {t:"今日开盘缺口与昨收方向？",w:"反向缺口 → 谨慎执行"},
   {t:"SpotGamma GEX已读取并填入系统？",w:"正GEX偏震荡；负GEX偏趋势"},
+  {t:"今日是否为月度交割日/四巫日/国债竞标日？",w:"是 → 成交量异常，Pin风险，尾市慎追"},
 ];
 const PRE_EN=[
   {t:"Any major data releases today (FOMC/CPI/NFP)?",w:"Yes → lower expectations or skip"},
@@ -18,6 +19,7 @@ const PRE_EN=[
   {t:"Is QQQ IV Rank above 50%?",w:"Yes → needs bigger move to profit"},
   {t:"Today's gap vs yesterday's close direction?",w:"Gap against trend = caution"},
   {t:"SpotGamma GEX read and entered?",w:"Pos GEX = range; Neg GEX = trend"},
+  {t:"Is today Monthly OPEX / Quad Witching / Treasury Auction?",w:"Yes → vol surge, pin risk, avoid chasing close"},
 ];
 const DAY_ZH=[
   "GEX环境已填入：正/负GEX已确认，Flip和Call/Put Wall价位已记录。",
@@ -31,6 +33,7 @@ const DAY_ZH=[
   "VIX未超过25，IV Rank未超过50%。",
   "未触发熔断：当日未亏$50 / 未连亏2笔。",
   "今日无FOMC/CPI发布前后15分钟内。",
+  "今日非月度交割(OPEX)/四巫日/30Y国债竞标日，或已知晓风险并接受缩仓。",
   "情绪正常：无回本、报复、补偿心理。",
   "今日GEX环境与操作方向一致。",
 ];
@@ -46,6 +49,7 @@ const DAY_EN=[
   "VIX below 25 and IV Rank below 50%.",
   "No circuit breakers: daily loss < $50, consecutive losses < 2.",
   "No FOMC/CPI release within 15 min.",
+  "Not Monthly OPEX / Quad Witching / 30Y Auction day — or risk acknowledged and size reduced.",
   "Emotional state normal: no chasing, revenge, or compensation urge.",
   "GEX environment aligns with intended trade direction.",
 ];
@@ -235,15 +239,38 @@ function YieldCell({label,yld,warn}){
 
 function EventBadge({ev,zh}){
   const riskColor={extreme:"var(--red)",high:"var(--amber)",medium:"var(--blue)"}[ev.risk]||"var(--t3)";
-  const labelZh={FOMC:"FOMC利率",CPI:"CPI通胀",NFP:"非农",PPI:"PPI",GDP:"GDP",PCE:"PCE"}[ev.key]||ev.key;
-  const warnZh={extreme:"极高风险 · 考虑跳过",high:"高风险 · 降低预期",medium:"中风险 · 注意时间"}[ev.risk]||"";
-  const warnEn={extreme:"Extreme risk · consider skip",high:"High risk · lower expectations",medium:"Medium risk · watch timing"}[ev.risk]||"";
+  const labelMap={
+    FOMC:{zh:"FOMC利率",en:"FOMC"},
+    CPI:{zh:"CPI通胀",en:"CPI"},
+    NFP:{zh:"非农就业",en:"NFP"},
+    PPI:{zh:"PPI",en:"PPI"},
+    GDP:{zh:"GDP",en:"GDP"},
+    PCE:{zh:"PCE通胀",en:"PCE"},
+    WITCHING:{zh:"四巫日",en:"Quad Witching"},
+    OPEX:{zh:"月度交割日",en:"Monthly OPEX"},
+    T10Y_AUC:{zh:"10Y国债竞标",en:"10Y Treasury Auction"},
+    T30Y_AUC:{zh:"30Y国债竞标",en:"30Y Treasury Auction"},
+  };
+  const warnMap={
+    FOMC:{zh:"极高风险 · 考虑跳过",en:"Extreme risk · consider skip"},
+    CPI:{zh:"高风险 · 降低预期",en:"High risk · lower expectations"},
+    NFP:{zh:"高风险 · 降低预期",en:"High risk · lower expectations"},
+    PPI:{zh:"中风险 · 注意时间",en:"Medium risk · watch timing"},
+    GDP:{zh:"中风险 · 注意时间",en:"Medium risk · watch timing"},
+    PCE:{zh:"中风险 · 注意时间",en:"Medium risk · watch timing"},
+    WITCHING:{zh:"成交量异常 · Pin风险 · 尾市慎追",en:"Vol surge · pin risk · avoid chasing close"},
+    OPEX:{zh:"月度交割 · 下午慎追 · 周一波动放大",en:"Monthly expiry · avoid chasing PM · Mon vol expands"},
+    T10Y_AUC:{zh:"1pm ET竞标 · 收益率可能跳动",en:"1pm ET auction · yield spike risk"},
+    T30Y_AUC:{zh:"1pm ET竞标 · 收益率可能跳动",en:"1pm ET auction · yield spike risk"},
+  };
+  const label=zh?(labelMap[ev.key]?.zh||ev.key):(labelMap[ev.key]?.en||ev.key);
+  const warn=zh?(warnMap[ev.key]?.zh||""):(warnMap[ev.key]?.en||"");
   return(
     <div style={{display:"flex",alignItems:"center",gap:6,padding:"4px 11px",borderRadius:5,border:`1px solid color-mix(in srgb,${riskColor} 40%,transparent)`,background:`color-mix(in srgb,${riskColor} 12%,transparent)`}}>
       <span style={{fontSize:13}}>{ev.emoji}</span>
       <div>
-        <div style={{fontSize:11,fontWeight:800,color:riskColor,letterSpacing:".06em"}}>{zh?labelZh:ev.key}</div>
-        <div style={{fontSize:9,color:"var(--t2)",marginTop:1,letterSpacing:".04em"}}>{zh?warnZh:warnEn}</div>
+        <div style={{fontSize:11,fontWeight:800,color:riskColor,letterSpacing:".06em"}}>{label}</div>
+        <div style={{fontSize:9,color:"var(--t2)",marginTop:1,letterSpacing:".04em"}}>{warn}</div>
       </div>
     </div>
   );
@@ -253,11 +280,18 @@ function MacroBar({macro,zh}){
   const riskColors={extreme:"var(--red)",high:"var(--amber)",medium:"var(--blue)",clear:"var(--green)"};
   const riskLabels={
     extreme:{zh:"⚠ 极高风险日 · 建议跳过或大幅缩仓",en:"⚠ Extreme Risk Day · skip or drastically reduce"},
-    high:{zh:"⚡ 高风险数据日 · 降低仓位预期",en:"⚡ High Risk Data Day · lower expectations"},
-    medium:{zh:"📌 中级数据日 · 注意发布时间",en:"📌 Medium Risk Day · watch release time"},
-    clear:{zh:"✓ 今日无重大数据发布",en:"✓ No major data releases today"},
+    high:{zh:"⚡ 高风险日 · 降低仓位预期",en:"⚡ High Risk Day · lower expectations"},
+    medium:{zh:"📌 中级风险日 · 注意时间节点",en:"📌 Medium Risk Day · watch key times"},
+    clear:{zh:"✓ 今日无重大风险事件",en:"✓ No major risk events today"},
   };
   const loading=!macro;
+
+  // Group events by category for organized display
+  const macroEvs    = loading?[]:(macro.events||[]).filter(e=>e.category==="macro");
+  const opexEvs     = loading?[]:(macro.events||[]).filter(e=>e.category==="opex");
+  const treasuryEvs = loading?[]:(macro.events||[]).filter(e=>e.category==="treasury");
+  const hasEvents   = !loading && macro.events && macro.events.length>0;
+
   return(
     <div style={{borderBottom:"1px solid var(--bd)",background:"var(--bg3)",display:"flex",alignItems:"stretch",flexWrap:"wrap",minHeight:52}}>
       {/* Section label */}
@@ -285,25 +319,29 @@ function MacroBar({macro,zh}){
         );
       })()}
 
-      {/* Calendar events / day status */}
-      <div style={{flex:1,display:"flex",alignItems:"center",gap:7,padding:"8px 14px",flexWrap:"wrap",minWidth:200}}>
+      {/* Calendar events — grouped by category */}
+      <div style={{flex:1,display:"flex",alignItems:"center",gap:6,padding:"8px 14px",flexWrap:"wrap",minWidth:200}}>
         {loading?(
           <div style={{fontSize:10,color:"var(--t3)",letterSpacing:".08em"}}>{zh?"加载宏观数据…":"Loading macro data…"}</div>
-        ):macro.events.length===0?(
+        ):!hasEvents?(
           <div style={{display:"flex",alignItems:"center",gap:8,padding:"5px 12px",borderRadius:5,border:"1px solid color-mix(in srgb,var(--green) 30%,transparent)",background:"color-mix(in srgb,var(--green) 8%,transparent)"}}>
             <span style={{fontSize:13}}>✅</span>
             <div>
-              <div style={{fontSize:11,fontWeight:800,color:"var(--green)",letterSpacing:".06em"}}>{zh?"今日无重大数据":"No Major Releases Today"}</div>
-              <div style={{fontSize:9,color:"var(--t2)",marginTop:1}}>{zh?"交易环境清晰，正常执行系统":"Clean trading environment"}</div>
+              <div style={{fontSize:11,fontWeight:800,color:"var(--green)",letterSpacing:".06em"}}>{zh?"今日无重大风险事件":"No Major Risk Events Today"}</div>
+              <div style={{fontSize:9,color:"var(--t2)",marginTop:1}}>{zh?"宏观/交割/国债竞标均无 · 正常执行系统":"Clean on macro + OPEX + Treasury · execute system normally"}</div>
             </div>
           </div>
         ):(
-          macro.events.map(ev=><EventBadge key={ev.key} ev={ev} zh={zh}/>)
+          <>
+            {macroEvs.map(ev=><EventBadge key={ev.key} ev={ev} zh={zh}/>)}
+            {opexEvs.map(ev=><EventBadge key={ev.key} ev={ev} zh={zh}/>)}
+            {treasuryEvs.map(ev=><EventBadge key={ev.key} ev={ev} zh={zh}/>)}
+          </>
         )}
       </div>
 
-      {/* Risk summary pill if events exist */}
-      {!loading&&macro.events.length>0&&(
+      {/* Risk summary pill */}
+      {!loading&&hasEvents&&(
         <div style={{display:"flex",alignItems:"center",padding:"0 14px",borderLeft:"1px solid var(--bd)",flexShrink:0}}>
           <div style={{padding:"5px 12px",borderRadius:20,fontSize:9,fontWeight:800,letterSpacing:".1em",border:`1px solid color-mix(in srgb,${riskColors[macro.dayRisk]} 40%,transparent)`,background:`color-mix(in srgb,${riskColors[macro.dayRisk]} 15%,transparent)`,color:riskColors[macro.dayRisk],textAlign:"center",lineHeight:1.4,maxWidth:140}}>
             {(zh?riskLabels[macro.dayRisk]?.zh:riskLabels[macro.dayRisk]?.en)||macro.dayRisk.toUpperCase()}
@@ -738,7 +776,7 @@ export default function App(){
         </>}
 
         <div style={{textAlign:"center",paddingTop:6}}>
-          <div style={{fontSize:9,color:"var(--t3)",letterSpacing:".15em"}}>SEA TRADING OS v7.5.2 · vercel clean · macro bar · 弱水三千，只取一瓢 · 先活下来，再赚钱</div>
+          <div style={{fontSize:9,color:"var(--t3)",letterSpacing:".15em"}}>SEA TRADING OS v7.6.0 · OPEX+Witching+Treasury · 弱水三千，只取一瓢 · 先活下来，再赚钱</div>
         </div>
       </div>
     </ThemeProvider>
