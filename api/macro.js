@@ -82,7 +82,7 @@ function getCalendar(dateStr) {
 async function fetchYield(symbol) {
   try {
     const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=2d`;
-    const r = await fetch(url, {
+    const r = await fetchWithTimeout(url, {
       headers: { "User-Agent": "Mozilla/5.0 Sea-Trading-OS/7.5", "Accept": "application/json" },
       cache: "no-store"
     });
@@ -144,4 +144,11 @@ export default async function handler(req) {
       "Cache-Control": "public, s-maxage=120, stale-while-revalidate=60"
     }
   });
+}
+
+
+function fetchWithTimeout(url, options = {}, timeoutMs = 7000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(id));
 }

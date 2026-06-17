@@ -1,11 +1,12 @@
 {
-  "name": "sea-trading-os-v7-4-4",
-  "version": "7.4.4",
+  "name": "sea-trading-os-v7-5-1-vercel-fixed",
+  "version": "7.5.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "vercel-build": "vite build"
   },
   "dependencies": {
     "react": "^18.3.1",
@@ -18,7 +19,7 @@
     "tailwindcss": "^3.4.17",
     "vite": "^4.5.5"
   },
-  "description": "Sea Trading OS v7.4.4 strict alignment layout: all entry checklists and iron rules are two-column aligned; iron rules are vertical single-column lists.",
+  "description": "Sea Trading OS v7.5.1 Vercel fixed: flat-root package, deterministic npm ci install, macro bar API safeguards.",
   "engines": {
     "node": "20.x"
   },

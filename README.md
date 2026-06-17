@@ -1,19 +1,26 @@
-# Sea Trading OS v7.4.4 — Deploy Visible Fix
+# Sea Trading OS v7.5.1 — Vercel Fixed
 
-Build marker: `SEA TRADING OS v7.4.4 · pixel alignment audit · visual upgrade`
+Build marker: `v7.5.1-vercel-fixed`
 
 ## 修复点
-- 修正 `index.html` 残留旧版本标识：原来 meta 还是 v7.1、title 还是 v7.3.2。
-- 修正 `package.json` description 残留 v7.2 文案。
-- 全站加入 no-store headers，避免 Vercel/浏览器继续显示旧入口。
-- 保留 v7.4 visual upgrade 页面内容。
-- 压缩包采用“根目录平铺结构”，上传 GitHub 时不会多套一层 `sea-trading-os-v7.4/` 文件夹。
 
-## 部署验证
-部署后页面底部应显示：
+- 压缩包改为根目录平铺结构：`package.json`、`vercel.json`、`src/`、`api/` 直接在压缩包根目录。
+- 新增 `package-lock.json`，Vercel 使用 `npm ci`，避免依赖安装阶段长期 Building。
+- 保留 Vite 配置：Build Command `npm run build`，Output Directory `dist`。
+- 保留 API 路由：`/api/quote`、`/api/macro`。
+- 添加部署标记，便于确认 Vercel 不是旧缓存。
 
-```txt
-SEA TRADING OS v7.4.4 · pixel alignment audit · visual upgrade
+## Vercel 设置
+
+- Framework Preset: Vite
+- Install Command: `npm ci --no-audit --no-fund --progress=false`
+- Build Command: `npm run build`
+- Output Directory: `dist`
+- Root Directory: 留空或选择仓库根目录，不要选择外层旧文件夹。
+
+## 本地验证
+
+```bash
+npm ci --no-audit --no-fund --progress=false
+npm run build
 ```
-
-如果仍显示旧版，说明 GitHub/Vercel 部署的不是这次提交，或上传时没有覆盖仓库根目录。

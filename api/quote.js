@@ -8,7 +8,7 @@ export default async function handler(req) {
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=2d`;
 
   try {
-    const r = await fetch(url, {
+    const r = await fetchWithTimeout(url, {
       headers: {
         "User-Agent": "Mozilla/5.0 Sea-Trading-OS/7.1",
         "Accept": "application/json"
@@ -49,4 +49,11 @@ function json(payload, status = 200, maxAge = 0) {
       "Cache-Control": maxAge > 0 ? `public, s-maxage=${maxAge}, stale-while-revalidate=60` : "no-store, max-age=0, must-revalidate"
     }
   });
+}
+
+
+function fetchWithTimeout(url, options = {}, timeoutMs = 7000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(id));
 }
