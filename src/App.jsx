@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from "react";
 function ls(k,d){try{var v=localStorage.getItem(k);return v!==null?v:d}catch(e){return d}}
 function lsSet(k,v){try{localStorage.setItem(k,v)}catch(e){}}
 const TODAY=new Date().toDateString();
-const BUILD_ID="v7.6.0 · OPEX+Witching+Treasury · 2026-06-18";
+const BUILD_ID="v7.7.0 · FlashAlpha GEX Auto · 2026-06-18";
 
 const PRE_ZH=[
   {t:"今日有无重大数据（FOMC/CPI/NFP）发布？",w:"有 → 降低预期或跳过当天"},
@@ -250,6 +250,26 @@ function useGEX(){
   });
   const save=useCallback((data)=>{lsSet("sea-gex-v7",JSON.stringify({...data,date:TODAY}));setGex({...data,date:TODAY});},[]);
   return {gex,save,isToday:!!gex.state&&gex.date===TODAY};
+}
+
+// Auto-fetch GEX from FlashAlpha via /api/gex
+function useGEXAuto(){
+  const [auto,setAuto]=useState({status:"idle",data:null,error:null,tier:null,ts:null});
+  const fetch=useCallback(async()=>{
+    setAuto(a=>({...a,status:"loading"}));
+    try{
+      const r=await window.fetch("/api/gex");
+      const d=await r.json();
+      if(d.ok){
+        setAuto({status:"ok",data:d,error:null,tier:d.tier,ts:Date.now()});
+      } else {
+        setAuto({status:"error",data:null,error:d.error,tier:d.tier||null,ts:Date.now()});
+      }
+    }catch(e){
+      setAuto({status:"error",data:null,error:"Network error",tier:null,ts:Date.now()});
+    }
+  },[]);
+  return {auto,fetch};
 }
 function useChecks(key){
   const [c,setC]=useState(()=>{try{return JSON.parse(ls("sea-chk-"+key,"{}"));}catch(e){return{};}});
@@ -631,56 +651,173 @@ function GEXPanel({zh,gex,onSave,isToday}){
   const setG=s=>setLocal(l=>({...l,state:s}));
   const handleSave=()=>{if(!local.state)return;onSave(local);setEditing(false);};
   const handleEdit=()=>{setLocal({state:gex.state,flip:gex.flip,call:gex.call,put:gex.put,vol:gex.vol});setEditing(true);};
+  const {auto,fetch:fetchAuto}=useGEXAuto();
+
+  // Apply auto-fetched data into the local form fields
+  const handleAutoApply=()=>{
+    if(!auto.data?.levels)return;
+    const lvl=auto.data.levels;
+    const regime=auto.data.regime;
+    setLocal({
+      state: regime||local.state||"positive",
+      flip:  lvl.flip   ? String(Number(lvl.flip).toFixed(2))   : local.flip,
+      call:  lvl.call   ? String(Number(lvl.call).toFixed(2))   : local.call,
+      put:   lvl.put    ? String(Number(lvl.put).toFixed(2))    : local.put,
+      vol:   lvl.vol    ? String(Number(lvl.vol).toFixed(2))    : local.vol,
+    });
+  };
+
+  const autoTime=auto.ts?new Date(auto.ts).toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit",timeZone:"America/New_York"}):null;
+  const autoHasData=auto.status==="ok"&&auto.data?.levels;
+  const isUpgradeNeeded=auto.tier==="free";
+
+  // ── Display mode (saved for today) ──────────────────────────────────────────
   if(!editing&&isToday){
     return(
       <div>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}><SL>{zh?"GEX 今日设置":"GEX Today"}</SL><Ibtn onClick={handleEdit}>{zh?"编辑":"Edit"}</Ibtn></div>
-        {/* 模式Badge + 四格大数值 */}
-        <div style={{marginBottom:8}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+          <SL>{zh?"GEX 今日设置":"GEX Today"}</SL>
+          <div style={{display:"flex",gap:6,alignItems:"center"}}>
+            {/* Auto-fetch status pill */}
+            {auto.status==="ok"&&<span style={{fontSize:10,color:"var(--green)",padding:"2px 8px",border:"1px solid rgba(52,211,153,0.4)",borderRadius:4,fontWeight:700}}>⚡ {zh?"已自动更新":"Auto-updated"} {autoTime} ET</span>}
+            <Ibtn onClick={handleEdit}>{zh?"编辑":"Edit"}</Ibtn>
+          </div>
+        </div>
+
+        {/* Regime badge */}
+        <div style={{marginBottom:10}}>
           {gex.state==="positive"
-            ?<div style={{display:"inline-flex",alignItems:"center",gap:8,padding:"5px 12px",borderRadius:6,border:"1px solid rgba(96,165,250,0.4)",background:"rgba(96,165,250,0.1)"}}>
-              <span style={{fontSize:15,fontWeight:800,color:"var(--blue)",letterSpacing:".04em"}}>{zh?"✦ 正GEX · 震荡模式":"✦ Positive GEX · Range"}</span>
-              <span style={{fontSize:11,color:"var(--t2)"}}>{zh?"偏区间 · 等回踩":"Range bias · wait pullback"}</span>
+            ?<div style={{display:"inline-flex",alignItems:"center",gap:8,padding:"6px 14px",borderRadius:6,border:"1px solid rgba(96,165,250,0.4)",background:"rgba(96,165,250,0.1)"}}>
+              <span style={{fontSize:15,fontWeight:800,color:"var(--blue)",letterSpacing:".04em"}}>{zh?"✦ 正GEX · 震荡模式":"✦ Positive GEX · Range Mode"}</span>
+              <span style={{fontSize:11,color:"var(--t2)"}}>{zh?"做市商压制波动 · 偏区间 · 等回踩":"Dealers dampen vol · Range bias · wait pullback"}</span>
             </div>
-            :<div style={{display:"inline-flex",alignItems:"center",gap:8,padding:"5px 12px",borderRadius:6,border:"1px solid rgba(251,191,36,0.4)",background:"rgba(251,191,36,0.1)"}}>
-              <span style={{fontSize:15,fontWeight:800,color:"var(--amber)",letterSpacing:".04em"}}>{zh?"⚡ 负GEX · 趋势模式":"⚡ Negative GEX · Trend"}</span>
-              <span style={{fontSize:11,color:"var(--t2)"}}>{zh?"偏顺势 · 等破位":"Trend bias · wait break"}</span>
+            :<div style={{display:"inline-flex",alignItems:"center",gap:8,padding:"6px 14px",borderRadius:6,border:"1px solid rgba(251,191,36,0.4)",background:"rgba(251,191,36,0.1)"}}>
+              <span style={{fontSize:15,fontWeight:800,color:"var(--amber)",letterSpacing:".04em"}}>{zh?"⚡ 负GEX · 趋势模式":"⚡ Negative GEX · Trend Mode"}</span>
+              <span style={{fontSize:11,color:"var(--t2)"}}>{zh?"做市商放大波动 · 偏顺势 · VWAP是方向线":"Dealers amplify vol · Trend bias · VWAP = regime line"}</span>
             </div>
           }
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6}}>
-          {[["Gamma Flip",gex.flip,"var(--teal)"],["Call Wall",gex.call,"var(--red)"],["Put Wall",gex.put,"var(--green)"],["Vol Trigger",gex.vol,"var(--amber)"]].map(([n,v,c])=>(
-            <div key={n} style={{background:"var(--bg3)",border:`1px solid ${v?cm(c,0.3):"var(--bd)"}`,borderRadius:6,padding:"10px 12px"}}>
-              <div style={{fontSize:10,letterSpacing:".1em",color:"var(--t3)",fontWeight:700,textTransform:"uppercase",marginBottom:6}}>{n}</div>
-              <div style={{fontSize:24,fontWeight:800,fontFamily:"monospace",letterSpacing:"-.01em",color:v?c:"var(--bg4)",lineHeight:1}}>{v?"$"+v:"—"}</div>
+
+        {/* 4 main levels */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:8}}>
+          {[["Gamma Flip",gex.flip,"var(--teal)",zh?"正负切换临界":"Regime pivot"],
+            ["Call Wall", gex.call,"var(--red)",  zh?"上方阻力/压制":"Overhead resistance"],
+            ["Put Wall",  gex.put, "var(--green)", zh?"下方支撑":"Support floor"],
+            ["Vol Trigger",gex.vol,"var(--amber)", zh?"波动启动价":"Vol expansion"]
+          ].map(([n,v,c,hint])=>(
+            <div key={n} style={{background:"var(--bg3)",border:`1px solid ${v?cm(c,0.3):"var(--bd)"}`,borderRadius:7,padding:"12px 14px"}}>
+              <div style={{fontSize:10,letterSpacing:".1em",color:"var(--t3)",fontWeight:700,textTransform:"uppercase",marginBottom:4}}>{n}</div>
+              <div style={{fontSize:26,fontWeight:800,fontFamily:"monospace",letterSpacing:"-.01em",color:v?c:"var(--bg4)",lineHeight:1}}>{v?"$"+v:"—"}</div>
+              <div style={{fontSize:10,color:"var(--t3)",marginTop:4}}>{hint}</div>
             </div>
           ))}
         </div>
+
+        {/* Bonus auto data row (0DTE magnet + high OI) if available */}
+        {autoHasData&&(auto.data.levels.magnet||auto.data.levels.high_oi)&&(
+          <div style={{display:"flex",gap:8,marginTop:2}}>
+            {auto.data.levels.magnet&&(
+              <div style={{flex:1,background:"var(--bg3)",border:"1px solid rgba(167,139,250,0.25)",borderRadius:6,padding:"8px 12px",display:"flex",alignItems:"center",gap:10}}>
+                <span style={{fontSize:10,letterSpacing:".1em",color:"var(--violet)",fontWeight:700,textTransform:"uppercase",flexShrink:0}}>{zh?"0DTE磁吸点":"0DTE Magnet"}</span>
+                <span style={{fontSize:20,fontWeight:800,fontFamily:"monospace",color:"var(--violet)"}}>${Number(auto.data.levels.magnet).toFixed(2)}</span>
+                <span style={{fontSize:10,color:"var(--t3)"}}>{zh?"当日期权流聚集":"Intraday pin zone"}</span>
+              </div>
+            )}
+            {auto.data.levels.high_oi&&(
+              <div style={{flex:1,background:"var(--bg3)",border:"1px solid rgba(16,217,184,0.2)",borderRadius:6,padding:"8px 12px",display:"flex",alignItems:"center",gap:10}}>
+                <span style={{fontSize:10,letterSpacing:".1em",color:"var(--teal)",fontWeight:700,textTransform:"uppercase",flexShrink:0}}>{zh?"最高OI行权价":"Highest OI Strike"}</span>
+                <span style={{fontSize:20,fontWeight:800,fontFamily:"monospace",color:"var(--teal)"}}>${Number(auto.data.levels.high_oi).toFixed(2)}</span>
+                <span style={{fontSize:10,color:"var(--t3)"}}>{zh?"OI最集中":"Max open interest"}</span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     );
   }
+
+  // ── Edit / setup mode ────────────────────────────────────────────────────────
   return(
     <div>
-      <SL>{zh?"GEX 每日设置（必填）":"GEX Daily Setup (required)"}</SL>
-      <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:6,marginBottom:8}}>
-        {[{s:"positive",label:zh?"正 GEX · 震荡模式":"Positive GEX · Range",sub:zh?"偏区间 · 少追突破 · 等回踩":"Range bias · avoid chasing · wait pullback",c:"var(--blue)"},{s:"negative",label:zh?"负 GEX · 趋势模式":"Negative GEX · Trend",sub:zh?"偏顺势 · 等破位 · VWAP第一参考":"Trend bias · wait break · VWAP = regime line",c:"var(--amber)"}].map(b=>(
-          <button key={b.s} onClick={()=>setG(b.s)} style={{border:`1px solid ${local.state===b.s?b.c+"88":"var(--bd2)"}`,borderRadius:7,padding:"11px 13px",background:local.state===b.s?cm(b.c,0.12):"var(--bg3)",textAlign:"left",cursor:"pointer",fontFamily:"inherit"}}>
-            <div style={{fontSize:13,fontWeight:800,textTransform:"uppercase",letterSpacing:".08em",color:b.c,marginBottom:4}}>{b.label}</div>
-            <div style={{fontSize:11,color:"var(--t2)"}}>{b.sub}</div>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+        <SL>{zh?"GEX 每日设置（必填）":"GEX Daily Setup (required)"}</SL>
+
+        {/* FlashAlpha auto-fetch button */}
+        <div style={{display:"flex",gap:6,alignItems:"center"}}>
+          {isUpgradeNeeded&&(
+            <a href="https://flashalpha.com/pricing" target="_blank" rel="noreferrer"
+              style={{fontSize:10,color:"var(--amber)",textDecoration:"none",padding:"4px 10px",border:"1px solid rgba(251,191,36,0.4)",borderRadius:4,fontWeight:700}}>
+              ↑ {zh?"升级 Basic 解锁 QQQ":"Upgrade to Basic for QQQ"}
+            </a>
+          )}
+          {auto.status==="ok"&&autoHasData&&(
+            <button onClick={handleAutoApply} style={{background:"rgba(16,217,184,0.15)",border:"1px solid var(--teal)",color:"var(--teal)",borderRadius:6,padding:"5px 13px",fontSize:11,cursor:"pointer",fontFamily:"inherit",fontWeight:700,letterSpacing:".04em"}}>
+              ✓ {zh?"应用自动数据":"Apply Auto Data"}
+            </button>
+          )}
+          <button onClick={fetchAuto} disabled={auto.status==="loading"} style={{background:auto.status==="loading"?"var(--bg4)":"var(--bg3)",border:"1px solid var(--bd2)",color:auto.status==="loading"?"var(--t3)":"var(--t2)",borderRadius:6,padding:"5px 13px",fontSize:11,cursor:auto.status==="loading"?"default":"pointer",fontFamily:"inherit",letterSpacing:".04em"}}>
+            {auto.status==="loading"?(zh?"获取中…":"Fetching…"):(zh?"⬇ 自动获取 GEX":"⬇ Auto-fetch GEX")}
+          </button>
+        </div>
+      </div>
+
+      {/* Auto-fetch result banner */}
+      {auto.status==="ok"&&autoHasData&&(
+        <div style={{marginBottom:10,padding:"8px 12px",borderRadius:6,background:"rgba(16,217,184,0.08)",border:"1px solid rgba(16,217,184,0.3)",display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+          <span style={{fontSize:11,color:"var(--teal)",fontWeight:800}}>✦ FlashAlpha QQQ · {autoTime} ET</span>
+          <span style={{fontSize:11,color:"var(--t2)"}}>Flip: <b style={{color:"var(--teal)"}}>${Number(auto.data.levels.flip).toFixed(2)}</b></span>
+          <span style={{fontSize:11,color:"var(--t2)"}}>Call Wall: <b style={{color:"var(--red)"}}>${Number(auto.data.levels.call).toFixed(2)}</b></span>
+          <span style={{fontSize:11,color:"var(--t2)"}}>Put Wall: <b style={{color:"var(--green)"}}>${Number(auto.data.levels.put).toFixed(2)}</b></span>
+          {auto.data.levels.magnet&&<span style={{fontSize:11,color:"var(--t2)"}}>0DTE: <b style={{color:"var(--violet)"}}>${Number(auto.data.levels.magnet).toFixed(2)}</b></span>}
+          <span style={{fontSize:10,color:"var(--t3)",marginLeft:"auto"}}>{zh?"点击「应用」填入下方":"Click Apply to populate fields below"}</span>
+        </div>
+      )}
+      {auto.status==="error"&&(
+        <div style={{marginBottom:10,padding:"8px 12px",borderRadius:6,background:"rgba(248,113,113,0.08)",border:"1px solid rgba(248,113,113,0.3)"}}>
+          <span style={{fontSize:11,color:"var(--red)",fontWeight:700}}>{isUpgradeNeeded?(zh?"⚠ QQQ需要Basic套餐 · 当前Free套餐仅支持个股":"⚠ QQQ requires Basic plan · Free tier = individual equities only"):`⚠ ${auto.error}`}</span>
+        </div>
+      )}
+
+      {/* Regime selector */}
+      <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:8,marginBottom:10}}>
+        {[{s:"positive",label:zh?"✦ 正 GEX · 震荡模式":"✦ Positive GEX · Range Mode",sub:zh?"做市商买跌卖涨 · 偏区间 · 少追突破 · 等回踩":"Dealers buy dips / sell rips · Range · avoid chasing · wait pullback",c:"var(--blue)"},
+          {s:"negative",label:zh?"⚡ 负 GEX · 趋势模式":"⚡ Negative GEX · Trend Mode",sub:zh?"做市商放大走势 · 偏顺势 · VWAP为方向线 · 等突破确认":"Dealers amplify moves · Trend · VWAP = regime · wait breakout confirm",c:"var(--amber)"}
+        ].map(b=>(
+          <button key={b.s} onClick={()=>setG(b.s)} style={{border:`1px solid ${local.state===b.s?b.c+"88":"var(--bd2)"}`,borderRadius:7,padding:"12px 14px",background:local.state===b.s?cm(b.c,0.12):"var(--bg3)",textAlign:"left",cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>
+            <div style={{fontSize:13,fontWeight:800,textTransform:"uppercase",letterSpacing:".06em",color:b.c,marginBottom:5}}>{b.label}</div>
+            <div style={{fontSize:11,color:"var(--t2)",lineHeight:1.5}}>{b.sub}</div>
           </button>
         ))}
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6,marginBottom:8}}>
-        {[{k:"flip",n:"Gamma Flip",h:zh?"正负切换位":"Regime flip",p:"480.00",c:"var(--teal)"},{k:"call",n:"Call Wall",h:zh?"上方压力":"Overhead",p:"490.00",c:"var(--red)"},{k:"put",n:"Put Wall",h:zh?"下方支撑":"Support",p:"470.00",c:"var(--green)"},{k:"vol",n:"Vol Trigger",h:zh?"波动启动":"Vol expand",p:"475.00",c:"var(--amber)"}].map(f=>(
-          <div key={f.k} style={{background:"var(--bg3)",border:"1px solid var(--bd)",borderRadius:6,padding:"10px 12px"}}>
-            <div style={{fontSize:10,letterSpacing:".1em",color:"var(--t3)",fontWeight:700,textTransform:"uppercase",marginBottom:5}}>{f.n}</div>
-            <input value={local[f.k]} onChange={e=>setLocal(l=>({...l,[f.k]:e.target.value}))} placeholder={f.p} inputMode="decimal" style={{background:"transparent",border:"none",color:f.c,fontSize:24,fontWeight:800,fontFamily:"monospace",width:"100%",outline:"none",letterSpacing:"-.01em"}}/>
-            <div style={{fontSize:10,color:"var(--t3)",marginTop:3}}>{f.h}</div>
+
+      {/* 4 key level inputs */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:10}}>
+        {[{k:"flip",n:"Gamma Flip",h:zh?"正负切换临界 · 核心参考":"Regime pivot · core reference",p:"480.00",c:"var(--teal)"},
+          {k:"call",n:"Call Wall",  h:zh?"上方阻力 / 压制区":"Overhead resistance",p:"490.00",c:"var(--red)"},
+          {k:"put", n:"Put Wall",   h:zh?"下方支撑 / 止跌区":"Support floor",p:"470.00",c:"var(--green)"},
+          {k:"vol", n:"Vol Trigger",h:zh?"波动启动 / GEX最大正值":"Vol expansion trigger",p:"475.00",c:"var(--amber)"}
+        ].map(f=>(
+          <div key={f.k} style={{background:"var(--bg3)",border:`1px solid ${local[f.k]?cm(f.c,0.3):"var(--bd)"}`,borderRadius:7,padding:"12px 14px",transition:"border-color .2s"}}>
+            <div style={{fontSize:10,letterSpacing:".1em",color:"var(--t3)",fontWeight:700,textTransform:"uppercase",marginBottom:6}}>{f.n}</div>
+            <input value={local[f.k]} onChange={e=>setLocal(l=>({...l,[f.k]:e.target.value}))} placeholder={f.p} inputMode="decimal"
+              style={{background:"transparent",border:"none",color:f.c,fontSize:24,fontWeight:800,fontFamily:"monospace",width:"100%",outline:"none",letterSpacing:"-.01em"}}/>
+            <div style={{fontSize:10,color:"var(--t3)",marginTop:4}}>{f.h}</div>
           </div>
         ))}
       </div>
-      <div style={{display:"flex",justifyContent:"flex-end"}}>
-        <button onClick={handleSave} style={{background:"var(--teal)",border:"none",color:"var(--bg)",borderRadius:6,padding:"8px 24px",fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit",letterSpacing:".08em"}}>{zh?"保存设置":"Save Setup"}</button>
+
+      {/* Source label + Save */}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div style={{fontSize:10,color:"var(--t3)"}}>
+          {autoHasData
+            ?(zh?"数据源: FlashAlpha自动获取 · 可手动覆盖":"Source: FlashAlpha auto · manual override supported")
+            :(zh?"数据源: 手动录入 (SpotGamma / WinnerStock)":"Source: manual entry (SpotGamma / WinnerStock)")
+          }
+        </div>
+        <button onClick={handleSave} disabled={!local.state}
+          style={{background:local.state?"var(--teal)":"var(--bg4)",border:"none",color:local.state?"var(--bg)":"var(--t3)",borderRadius:6,padding:"8px 28px",fontSize:13,fontWeight:800,cursor:local.state?"pointer":"default",fontFamily:"inherit",letterSpacing:".08em",transition:"all .15s"}}>
+          {zh?"保存 GEX 设置":"Save GEX Setup"}
+        </button>
       </div>
     </div>
   );
@@ -901,7 +1038,7 @@ export default function App(){
         </>}
 
         <div style={{textAlign:"center",paddingTop:6}}>
-          <div style={{fontSize:10,color:"var(--t3)",letterSpacing:".15em"}}>SEA TRADING OS v7.6.0 · OPEX+Witching+Treasury · 弱水三千，只取一瓢 · 先活下来，再赚钱</div>
+          <div style={{fontSize:10,color:"var(--t3)",letterSpacing:".15em"}}>SEA TRADING OS v7.7.0 · FlashAlpha GEX Auto · 弱水三千，只取一瓢 · 先活下来，再赚钱</div>
         </div>
       </div>
     </ThemeProvider>
