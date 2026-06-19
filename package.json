@@ -1,6 +1,6 @@
 {
-  "name": "sea-trading-os-v7-6-4-macro-matrix-force-refresh",
-  "version": "7.6.4",
+  "name": "sea-trading-os-v7-5-2-vercel-clean",
+  "version": "7.5.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -19,7 +19,7 @@
     "tailwindcss": "^3.4.17",
     "vite": "^4.5.5"
   },
-  "description": "Sea Trading OS v7.6.4 Macro Matrix: clean Vercel deployment package with unified build markers, flat root, serverless API, and no stale version headers.",
+  "description": "Sea Trading OS v7.5.2 Vercel clean: flat root, conventional serverless API, no stale rewrites, deployment ignore rules.",
   "engines": {
     "node": "20.x"
   },

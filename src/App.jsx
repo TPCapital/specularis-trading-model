@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from "react";
 function ls(k,d){try{var v=localStorage.getItem(k);return v!==null?v:d}catch(e){return d}}
 function lsSet(k,v){try{localStorage.setItem(k,v)}catch(e){}}
 const TODAY=new Date().toDateString();
-const BUILD_ID="v7.6.4 · Macro Matrix · OPEX+Witching+Treasury · 2026-06-18";
+const BUILD_ID="v7.6.0 · OPEX+Witching+Treasury · 2026-06-18";
 
 const PRE_ZH=[
   {t:"今日有无重大数据（FOMC/CPI/NFP）发布？",w:"有 → 降低预期或跳过当天"},
@@ -317,19 +317,19 @@ const lightVars={bg:"#f8f9fb",bg2:"#ffffff",bg3:"#f0f2f5",bg4:"#e8eaf0",t1:"#0f1
 // ─── MACRO BAR: yields + economic calendar ───────────────────────────────────
 function YieldCell({label,yld,warn}){
   if(!yld)return(
-    <div style={{display:"flex",flexDirection:"column",gap:2,padding:"6px 14px",borderRight:"1px solid var(--bd)"}}>
-      <div style={{fontSize:9,letterSpacing:".12em",color:"var(--t3)",fontWeight:700,textTransform:"uppercase"}}>{label}</div>
-      <div style={{fontSize:16,fontWeight:800,fontFamily:"monospace",color:"var(--bg4)"}}>—</div>
+    <div style={{display:"flex",flexDirection:"column",gap:2,padding:"8px 16px",borderRight:"1px solid var(--bd)"}}>
+      <div style={{fontSize:10,letterSpacing:".12em",color:"var(--t3)",fontWeight:700,textTransform:"uppercase"}}>{label}</div>
+      <div style={{fontSize:18,fontWeight:800,fontFamily:"monospace",color:"var(--bg4)"}}>—</div>
     </div>
   );
   const col=warn?yld.chg>0?"var(--red)":"var(--green)":"var(--t2)";
   const chgCol=yld.chg>0?"var(--red)":yld.chg<0?"var(--green)":"var(--t3)";
   return(
-    <div style={{display:"flex",flexDirection:"column",gap:2,padding:"6px 14px",borderRight:"1px solid var(--bd)"}}>
-      <div style={{fontSize:9,letterSpacing:".12em",color:"var(--t3)",fontWeight:700,textTransform:"uppercase"}}>{label}</div>
+    <div style={{display:"flex",flexDirection:"column",gap:2,padding:"8px 16px",borderRight:"1px solid var(--bd)"}}>
+      <div style={{fontSize:10,letterSpacing:".12em",color:"var(--t3)",fontWeight:700,textTransform:"uppercase"}}>{label}</div>
       <div style={{display:"flex",alignItems:"baseline",gap:5}}>
-        <div style={{fontSize:18,fontWeight:800,fontFamily:"monospace",color:col,lineHeight:1}}>{yld.price.toFixed(2)}<span style={{fontSize:10,color:"var(--t3)",fontWeight:400}}>%</span></div>
-        <span style={{fontSize:10,fontWeight:700,color:chgCol}}>{yld.chg>=0?"+":""}{yld.chg.toFixed(2)}</span>
+        <div style={{fontSize:20,fontWeight:800,fontFamily:"monospace",color:col,lineHeight:1}}>{yld.price.toFixed(2)}<span style={{fontSize:11,color:"var(--t3)",fontWeight:400}}>%</span></div>
+        <span style={{fontSize:11,fontWeight:700,color:chgCol}}>{yld.chg>=0?"+":""}{yld.chg.toFixed(2)}</span>
       </div>
     </div>
   );
@@ -367,8 +367,8 @@ function EventBadge({ev,zh}){
     <div style={{display:"flex",alignItems:"center",gap:6,padding:"4px 11px",borderRadius:5,border:`1px solid ${cm(riskColor,0.4)}`,background:cm(riskColor,0.12)}}>
       <span style={{fontSize:13}}>{ev.emoji}</span>
       <div>
-        <div style={{fontSize:11,fontWeight:800,color:riskColor,letterSpacing:".06em"}}>{label}</div>
-        <div style={{fontSize:9,color:"var(--t2)",marginTop:1,letterSpacing:".04em"}}>{warn}</div>
+        <div style={{fontSize:12,fontWeight:800,color:riskColor,letterSpacing:".06em"}}>{label}</div>
+        <div style={{fontSize:10,color:"var(--t2)",marginTop:1,letterSpacing:".04em"}}>{warn}</div>
       </div>
     </div>
   );
@@ -391,10 +391,10 @@ function MacroBar({macro,zh}){
   const hasEvents   = !loading && macro.events && macro.events.length>0;
 
   return(
-    <div style={{borderBottom:"1px solid var(--bd)",background:"var(--bg3)",display:"flex",alignItems:"stretch",flexWrap:"wrap",minHeight:52}}>
+    <div style={{borderBottom:"1px solid var(--bd)",background:"var(--bg3)",display:"flex",alignItems:"stretch",flexWrap:"wrap",minHeight:62}}>
       {/* Section label */}
-      <div style={{display:"flex",alignItems:"center",padding:"0 14px",borderRight:"1px solid var(--bd)",minWidth:72,flexShrink:0}}>
-        <div style={{fontSize:8,letterSpacing:".18em",color:"var(--t3)",fontWeight:700,textTransform:"uppercase",lineHeight:1.4}}>MACRO<br/>DATA</div>
+      <div style={{display:"flex",alignItems:"center",padding:"0 16px",borderRight:"1px solid var(--bd)",minWidth:80,flexShrink:0}}>
+        <div style={{fontSize:10,letterSpacing:".18em",color:"var(--t3)",fontWeight:700,textTransform:"uppercase",lineHeight:1.4}}>MACRO<br/>DATA</div>
       </div>
 
       {/* Yield cells */}
@@ -407,26 +407,26 @@ function MacroBar({macro,zh}){
         const spread=macro.yields.y10.price-macro.yields.y5.price;
         const col=spread>=0?"var(--green)":"var(--red)";
         return(
-          <div style={{display:"flex",flexDirection:"column",gap:2,padding:"6px 14px",borderRight:"1px solid var(--bd)"}}>
-            <div style={{fontSize:9,letterSpacing:".12em",color:"var(--t3)",fontWeight:700,textTransform:"uppercase"}}>{zh?"10Y-5Y利差":"10Y-5Y SPREAD"}</div>
+          <div style={{display:"flex",flexDirection:"column",gap:2,padding:"8px 16px",borderRight:"1px solid var(--bd)"}}>
+            <div style={{fontSize:10,letterSpacing:".12em",color:"var(--t3)",fontWeight:700,textTransform:"uppercase"}}>{zh?"10Y-5Y利差":"10Y-5Y SPREAD"}</div>
             <div style={{display:"flex",alignItems:"baseline",gap:4}}>
-              <div style={{fontSize:18,fontWeight:800,fontFamily:"monospace",color:col,lineHeight:1}}>{spread>=0?"+":""}{spread.toFixed(2)}<span style={{fontSize:10,color:"var(--t3)",fontWeight:400}}>%</span></div>
-              <span style={{fontSize:9,color:"var(--t3)"}}>{spread>=0?(zh?"正常曲线":"Normal"):(zh?"倒挂警告":"Inverted ⚠")}</span>
+              <div style={{fontSize:20,fontWeight:800,fontFamily:"monospace",color:col,lineHeight:1}}>{spread>=0?"+":""}{spread.toFixed(2)}<span style={{fontSize:11,color:"var(--t3)",fontWeight:400}}>%</span></div>
+              <span style={{fontSize:10,color:"var(--t3)"}}>{spread>=0?(zh?"正常曲线":"Normal"):(zh?"倒挂警告":"Inverted ⚠")}</span>
             </div>
           </div>
         );
       })()}
 
       {/* Calendar events — grouped by category */}
-      <div style={{flex:1,display:"flex",alignItems:"center",gap:6,padding:"8px 14px",flexWrap:"wrap",minWidth:200}}>
+      <div style={{flex:1,display:"flex",alignItems:"center",gap:7,padding:"10px 16px",flexWrap:"wrap",minWidth:200}}>
         {loading?(
-          <div style={{fontSize:10,color:"var(--t3)",letterSpacing:".08em"}}>{zh?"加载宏观数据…":"Loading macro data…"}</div>
+          <div style={{fontSize:11,color:"var(--t3)",letterSpacing:".08em"}}>{zh?"加载宏观数据…":"Loading macro data…"}</div>
         ):!hasEvents?(
           <div style={{display:"flex",alignItems:"center",gap:8,padding:"5px 12px",borderRadius:5,border:"1px solid rgba(52,211,153,0.3)",background:"rgba(52,211,153,0.08)"}}>
             <span style={{fontSize:13}}>✅</span>
             <div>
-              <div style={{fontSize:11,fontWeight:800,color:"var(--green)",letterSpacing:".06em"}}>{zh?"今日无重大风险事件":"No Major Risk Events Today"}</div>
-              <div style={{fontSize:9,color:"var(--t2)",marginTop:1}}>{zh?"宏观/交割/国债竞标均无 · 正常执行系统":"Clean on macro + OPEX + Treasury · execute system normally"}</div>
+              <div style={{fontSize:12,fontWeight:800,color:"var(--green)",letterSpacing:".06em"}}>{zh?"今日无重大风险事件":"No Major Risk Events Today"}</div>
+              <div style={{fontSize:10,color:"var(--t2)",marginTop:1}}>{zh?"宏观/交割/国债竞标均无 · 正常执行系统":"Clean on macro + OPEX + Treasury · execute system normally"}</div>
             </div>
           </div>
         ):(
@@ -441,7 +441,7 @@ function MacroBar({macro,zh}){
       {/* Risk summary pill */}
       {!loading&&hasEvents&&(
         <div style={{display:"flex",alignItems:"center",padding:"0 14px",borderLeft:"1px solid var(--bd)",flexShrink:0}}>
-          <div style={{padding:"5px 12px",borderRadius:20,fontSize:9,fontWeight:800,letterSpacing:".1em",border:`1px solid ${cm(riskColors[macro.dayRisk],0.4)}`,background:cm(riskColors[macro.dayRisk],0.15),color:riskColors[macro.dayRisk],textAlign:"center",lineHeight:1.4,maxWidth:140}}>
+          <div style={{padding:"5px 12px",borderRadius:20,fontSize:10,fontWeight:800,letterSpacing:".1em",border:`1px solid ${cm(riskColors[macro.dayRisk],0.4)}`,background:cm(riskColors[macro.dayRisk],0.15),color:riskColors[macro.dayRisk],textAlign:"center",lineHeight:1.4,maxWidth:160}}>
             {(zh?riskLabels[macro.dayRisk]?.zh:riskLabels[macro.dayRisk]?.en)||macro.dayRisk.toUpperCase()}
           </div>
         </div>
@@ -459,11 +459,23 @@ function ThemeProvider({dark,children}){
     "--amber":dark?C.amber:"#d97706","--blue":dark?C.blue:"#2563eb",
     "--green":dark?C.green:"#059669","--violet":dark?C.violet:"#7c3aed",
     background:"var(--bg)",color:"var(--t1)",minHeight:"100vh",
-    fontFamily:"'SF Mono','Fira Code',ui-monospace,monospace",fontSize:13,
+    fontFamily:"'Inter','SF Pro Display',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",fontSize:14,
   };
   // data-darkreader-ignore tells Dark Reader not to touch this subtree
   return <div style={style} data-darkreader-ignore>{children}</div>;
 }
+
+// ─── Global font scale constants (single source of truth) ───────────────────
+// All components reference these so a single edit rescales everything
+const F={
+  label:  10,   // section labels, caps headers
+  caption: 11,  // secondary text, hints
+  body:   13,   // primary body text
+  ui:     13,   // buttons, checklist items
+  num:    20,   // inline numbers (yields, counters)
+  numLg:  24,   // ticker prices
+  numXl:  28,   // GEX key prices
+};
 
 // ─── TICKER: 大数字 + 变化
 function Tick({sym,label,data,fmt}){
@@ -474,12 +486,12 @@ function Tick({sym,label,data,fmt}){
   const pctStr=data?`${data.pct>=0?"+":""}${data.pct.toFixed(2)}%`:"—";
   const col=!data?"var(--t3)":data.chg>0?"var(--green)":data.chg<0?"var(--red)":"var(--t3)";
   return(
-    <div style={{background:"var(--bg)",padding:"10px 14px",borderRight:"1px solid var(--bd)",display:"flex",flexDirection:"column",justifyContent:"space-between",minWidth:0}}>
-      <div style={{fontSize:9,letterSpacing:".14em",color:"var(--t3)",fontWeight:700,textTransform:"uppercase",marginBottom:4}}>{label||sym}</div>
-      <div style={{fontSize:22,fontWeight:800,fontFamily:"monospace",letterSpacing:"-.02em",color:loading?"var(--bg4)":"var(--t1)",animation:loading?"pulse 1.2s infinite":"none",lineHeight:1}}>{loading?"———":formatted}</div>
-      <div style={{display:"flex",gap:6,marginTop:4,alignItems:"center"}}>
-        <span style={{fontSize:11,fontWeight:700,color:col}}>{loading?"—":chgStr}</span>
-        <span style={{fontSize:10,color:col,opacity:.8}}>{loading?"—":pctStr}</span>
+    <div style={{background:"var(--bg)",padding:"12px 16px",borderRight:"1px solid var(--bd)",display:"flex",flexDirection:"column",justifyContent:"space-between",minWidth:0}}>
+      <div style={{fontSize:10,letterSpacing:".14em",color:"var(--t3)",fontWeight:700,textTransform:"uppercase",marginBottom:4}}>{label||sym}</div>
+      <div style={{fontSize:26,fontWeight:800,fontFamily:"monospace",letterSpacing:"-.02em",color:loading?"var(--bg4)":"var(--t1)",animation:loading?"pulse 1.2s infinite":"none",lineHeight:1}}>{loading?"———":formatted}</div>
+      <div style={{display:"flex",gap:6,marginTop:5,alignItems:"center"}}>
+        <span style={{fontSize:12,fontWeight:700,color:col}}>{loading?"—":chgStr}</span>
+        <span style={{fontSize:11,color:col,opacity:.8}}>{loading?"—":pctStr}</span>
       </div>
     </div>
   );
@@ -489,7 +501,7 @@ function VixBadge({vix}){
   if(!vix) return null;
   const z=vix<15?{c:"var(--green)",t:"LOW VOL"}:vix<25?{c:"var(--blue)",t:"NORMAL"}:vix<35?{c:"var(--amber)",t:"ELEVATED"}:{c:"var(--red)",t:"EXTREME"};
   return(
-    <span style={{fontSize:9,letterSpacing:".1em",padding:"2px 7px",borderRadius:4,fontWeight:800,border:`1px solid ${z.c}66`,background:cm(z.c,0.15),color:z.c}}>{z.t}</span>
+    <span style={{fontSize:10,letterSpacing:".1em",padding:"3px 8px",borderRadius:4,fontWeight:800,border:`1px solid ${z.c}66`,background:cm(z.c,0.15),color:z.c}}>{z.t}</span>
   );
 }
 
@@ -503,7 +515,7 @@ function VixZones({vix}){
   return(
     <div style={{display:"flex",gap:4}}>
       {zones.map(z=>(
-        <span key={z.r} style={{fontSize:9,letterSpacing:".07em",padding:"2px 7px",borderRadius:4,fontWeight:700,border:`1px solid ${z.a?z.c+"88":"var(--bd)"}`,background:z.a?cm(z.c,0.15):"transparent",color:z.a?z.c:"var(--t3)"}}>
+        <span key={z.r} style={{fontSize:10,letterSpacing:".07em",padding:"3px 8px",borderRadius:4,fontWeight:700,border:`1px solid ${z.a?z.c+"88":"var(--bd)"}`,background:z.a?cm(z.c,0.15):"transparent",color:z.a?z.c:"var(--t3)"}}>
           {z.r}
         </span>
       ))}
@@ -519,8 +531,8 @@ function CheckItem({text,warn,checked,onClick}){
         {checked&&<svg width="10" height="10" viewBox="0 0 12 10" fill="none" stroke="var(--bg)" strokeWidth="2.5"><polyline points="1,5 4.5,9 11,1"/></svg>}
       </div>
       <div style={{flex:1}}>
-        <div style={{fontSize:11,lineHeight:1.5,color:checked?"var(--t2)":"var(--t1)",textDecoration:checked?"line-through":"none",wordBreak:"break-word",overflowWrap:"anywhere",textDecorationColor:"var(--bd2)"}}>{text}</div>
-        {warn&&<div style={{fontSize:10,color:"var(--amber)",marginTop:2,fontWeight:600}}>{warn}</div>}
+        <div style={{fontSize:13,lineHeight:1.55,color:checked?"var(--t2)":"var(--t1)",textDecoration:checked?"line-through":"none",wordBreak:"break-word",overflowWrap:"anywhere",textDecorationColor:"var(--bd2)"}}>{text}</div>
+        {warn&&<div style={{fontSize:11,color:"var(--amber)",marginTop:2,fontWeight:600}}>{warn}</div>}
       </div>
     </div>
   );
@@ -535,21 +547,21 @@ function Checklist({items,checks,onToggle,label,readyText}){
   return(
     <div>
       <div style={{background:"var(--bg3)",border:"1px solid var(--bd)",borderRadius:8,overflow:"hidden"}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 12px",borderBottom:"1px solid var(--bd)"}}>
-          <div style={{fontSize:10,fontWeight:700,letterSpacing:".1em",textTransform:"uppercase",color:"var(--t1)"}}>{label}</div>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",borderBottom:"1px solid var(--bd)"}}>
+          <div style={{fontSize:11,fontWeight:700,letterSpacing:".1em",textTransform:"uppercase",color:"var(--t1)"}}>{label}</div>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <div style={{fontSize:18,fontWeight:800,fontFamily:"monospace",color:barColor,lineHeight:1}}>{count}<span style={{fontSize:11,color:"var(--t3)",fontWeight:400}}>/{total}</span></div>
+            <div style={{fontSize:20,fontWeight:800,fontFamily:"monospace",color:barColor,lineHeight:1}}>{count}<span style={{fontSize:13,color:"var(--t3)",fontWeight:400}}>/{total}</span></div>
           </div>
         </div>
         {/* 4px 进度条 */}
-        <div style={{height:4,background:"var(--bd)"}}><div style={{height:"100%",width:`${pct}%`,background:barColor,transition:"width .3s,background .3s",borderRadius:"0 2px 2px 0"}}/></div>
+        <div style={{height:5,background:"var(--bd)"}}><div style={{height:"100%",width:`${pct}%`,background:barColor,transition:"width .3s,background .3s",borderRadius:"0 2px 2px 0"}}/></div>
         {items.map((item,i)=>{
           const text=typeof item==="string"?item:item.t;
           const warn=typeof item==="object"?item.w:null;
           return <CheckItem key={i} text={text} warn={warn} checked={!!checks[i]} onClick={()=>onToggle(i)}/>;
         })}
       </div>
-      {count===total&&<div style={{marginTop:6,borderRadius:6,padding:"8px 12px",textAlign:"center",fontSize:12,fontWeight:800,letterSpacing:".1em",background:"rgba(52,211,153,0.14)",border:"1px solid rgba(52,211,153,0.4)",color:"var(--green)"}}>{readyText}</div>}
+      {count===total&&<div style={{marginTop:8,borderRadius:7,padding:"10px 14px",textAlign:"center",fontSize:13,fontWeight:800,letterSpacing:".1em",background:"rgba(52,211,153,0.14)",border:"1px solid rgba(52,211,153,0.4)",color:"var(--green)"}}>{readyText}</div>}
     </div>
   );
 }
@@ -561,9 +573,9 @@ function Rules({items,hotIdx=[]}){
       {items.map((r,i)=>{
         const hot=hotIdx.includes(i);
         return(
-          <div key={i} style={{background:"var(--bg3)",border:`1px solid ${hot?"rgba(248,113,113,0.35)":"var(--bd)"}`,borderRadius:6,padding:"7px 10px",display:"flex",gap:8,alignItems:"flex-start",minHeight:34,overflow:"hidden"}}>
-            <div style={{width:20,height:20,borderRadius:4,background:hot?"rgba(248,113,113,0.22)":"var(--bg4)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:800,color:hot?"var(--red)":"var(--t3)",flexShrink:0}}>{i+1}</div>
-            <div style={{fontSize:11,lineHeight:1.4,color:hot?"var(--red)":"var(--t1)",fontWeight:hot?700:400,minWidth:0,wordBreak:"break-word",overflowWrap:"anywhere"}}>{r}</div>
+          <div key={i} style={{background:"var(--bg3)",border:`1px solid ${hot?"rgba(248,113,113,0.35)":"var(--bd)"}`,borderRadius:6,padding:"9px 12px",display:"flex",gap:9,alignItems:"flex-start",minHeight:38,overflow:"hidden"}}>
+            <div style={{width:22,height:22,borderRadius:4,background:hot?"rgba(248,113,113,0.22)":"var(--bg4)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:800,color:hot?"var(--red)":"var(--t3)",flexShrink:0}}>{i+1}</div>
+            <div style={{fontSize:12,lineHeight:1.5,color:hot?"var(--red)":"var(--t1)",fontWeight:hot?700:400,minWidth:0,wordBreak:"break-word",overflowWrap:"anywhere"}}>{r}</div>
           </div>
         );
       })}
@@ -577,9 +589,9 @@ function StepRail({steps,color="var(--teal)"}){
     <div style={{display:"flex",gap:0,overflow:"hidden",borderRadius:7,border:"1px solid var(--bd)"}}>
       {steps.map((s,i)=>(
         <div key={i} style={{flex:1,padding:"10px 12px",background:"var(--bg3)",borderRight:i<steps.length-1?"1px solid var(--bd)":"none"}}>
-          <div style={{fontSize:9,letterSpacing:".12em",color,fontWeight:800,textTransform:"uppercase",marginBottom:4}}>{s.n}</div>
-          <div style={{fontSize:12,fontWeight:800,color:"var(--t1)",marginBottom:3}}>{s.t}</div>
-          <div style={{fontSize:10,color:"var(--t2)",lineHeight:1.45}}>{s.d}</div>
+          <div style={{fontSize:11,letterSpacing:".12em",color,fontWeight:800,textTransform:"uppercase",marginBottom:4}}>{s.n}</div>
+          <div style={{fontSize:13,fontWeight:800,color:"var(--t1)",marginBottom:4}}>{s.t}</div>
+          <div style={{fontSize:11,color:"var(--t2)",lineHeight:1.5}}>{s.d}</div>
         </div>
       ))}
     </div>
@@ -592,22 +604,22 @@ function KZGrid({zones}){
     <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:7,height:"100%",alignItems:"stretch"}}>
       {zones.map((z,i)=>(
         <div key={i} style={{borderRadius:7,padding:"10px 12px",border:`1px solid ${cm(z.c,0.4)}`,background:cm(z.c,0.08),minHeight:72,height:"100%",display:"flex",flexDirection:"column",justifyContent:"center"}}>
-          <div style={{fontSize:10,fontWeight:800,color:z.c,marginBottom:5,letterSpacing:".06em",textTransform:"uppercase"}}>{z.title}</div>
-          <div style={{fontSize:16,fontWeight:800,fontFamily:"monospace",letterSpacing:"-.01em",color:"var(--t1)",marginBottom:4,lineHeight:1}}>{z.time}</div>
-          <div style={{fontSize:10,color:"var(--t2)",lineHeight:1.45}}>{z.note}</div>
+          <div style={{fontSize:11,fontWeight:800,color:z.c,marginBottom:5,letterSpacing:".06em",textTransform:"uppercase"}}>{z.title}</div>
+          <div style={{fontSize:18,fontWeight:800,fontFamily:"monospace",letterSpacing:"-.01em",color:"var(--t1)",marginBottom:5,lineHeight:1}}>{z.time}</div>
+          <div style={{fontSize:11,color:"var(--t2)",lineHeight:1.5}}>{z.note}</div>
         </div>
       ))}
     </div>
   );
 }
 
-function SL({children}){return <div style={{fontSize:9,letterSpacing:".18em",color:"var(--t3)",fontWeight:700,textTransform:"uppercase",marginBottom:5}}>{children}</div>;}
+function SL({children}){return <div style={{fontSize:10,letterSpacing:".18em",color:"var(--t3)",fontWeight:700,textTransform:"uppercase",marginBottom:6}}>{children}</div>;}
 function AlignCol({children}){return <div style={{height:"100%",display:"flex",flexDirection:"column",minWidth:0}}>{children}</div>;}
 function Divider(){return <div style={{height:1,background:"var(--bd)",margin:"2px 0"}}/>;}
-function Ibtn({children,onClick,active}){return <button onClick={onClick} style={{background:active?"rgba(16,217,184,0.15)":"transparent",border:`1px solid ${active?"var(--teal)":"var(--bd2)"}`,color:active?"var(--teal)":"var(--t2)",borderRadius:6,padding:"5px 12px",fontSize:10,cursor:"pointer",fontFamily:"inherit",letterSpacing:".08em"}}>{children}</button>;}
-function Rbtn({children,onClick}){return <button onClick={onClick} style={{background:"transparent",border:"1px solid var(--bd)",color:"var(--t3)",borderRadius:4,padding:"3px 8px",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>{children}</button>;}
-function SectionHead({children,actions}){return <div style={{height:28,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:6,flexShrink:0}}><div style={{fontSize:9,letterSpacing:".18em",color:"var(--t3)",fontWeight:700,textTransform:"uppercase",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{children}</div>{actions&&<div style={{display:"flex",alignItems:"center",gap:7,flexShrink:0}}>{actions}</div>}</div>;}
-function PairGrid({children}){return <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:10,alignItems:"stretch"}}>{children}</div>;}
+function Ibtn({children,onClick,active}){return <button onClick={onClick} style={{background:active?"rgba(16,217,184,0.15)":"transparent",border:`1px solid ${active?"var(--teal)":"var(--bd2)"}`,color:active?"var(--teal)":"var(--t2)",borderRadius:6,padding:"5px 14px",fontSize:11,cursor:"pointer",fontFamily:"inherit",letterSpacing:".06em"}}>{children}</button>;}
+function Rbtn({children,onClick}){return <button onClick={onClick} style={{background:"transparent",border:"1px solid var(--bd)",color:"var(--t3)",borderRadius:4,padding:"4px 10px",fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>{children}</button>;}
+function SectionHead({children,actions}){return <div style={{height:32,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:8,flexShrink:0}}><div style={{fontSize:11,letterSpacing:".14em",color:"var(--t2)",fontWeight:700,textTransform:"uppercase",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{children}</div>{actions&&<div style={{display:"flex",alignItems:"center",gap:7,flexShrink:0}}>{actions}</div>}</div>;}
+function PairGrid({children}){return <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:14,alignItems:"stretch"}}>{children}</div>;}
 function StrictCol({title,actions,children}){return <div style={{height:"100%",minWidth:0,display:"flex",flexDirection:"column"}}><SectionHead actions={actions}>{title}</SectionHead><div style={{flex:1,minHeight:0,minWidth:0}}>{children}</div></div>;}
 function RuleCol({title,items,hotIdx=[]}){return <StrictCol title={title}><Rules items={items} hotIdx={hotIdx}/></StrictCol>;}
 
@@ -627,20 +639,20 @@ function GEXPanel({zh,gex,onSave,isToday}){
         <div style={{marginBottom:8}}>
           {gex.state==="positive"
             ?<div style={{display:"inline-flex",alignItems:"center",gap:8,padding:"5px 12px",borderRadius:6,border:"1px solid rgba(96,165,250,0.4)",background:"rgba(96,165,250,0.1)"}}>
-              <span style={{fontSize:14,fontWeight:800,color:"var(--blue)",letterSpacing:".04em"}}>{zh?"✦ 正GEX · 震荡模式":"✦ Positive GEX · Range"}</span>
-              <span style={{fontSize:10,color:"var(--t2)"}}>{zh?"偏区间 · 等回踩":"Range bias · wait pullback"}</span>
+              <span style={{fontSize:15,fontWeight:800,color:"var(--blue)",letterSpacing:".04em"}}>{zh?"✦ 正GEX · 震荡模式":"✦ Positive GEX · Range"}</span>
+              <span style={{fontSize:11,color:"var(--t2)"}}>{zh?"偏区间 · 等回踩":"Range bias · wait pullback"}</span>
             </div>
             :<div style={{display:"inline-flex",alignItems:"center",gap:8,padding:"5px 12px",borderRadius:6,border:"1px solid rgba(251,191,36,0.4)",background:"rgba(251,191,36,0.1)"}}>
-              <span style={{fontSize:14,fontWeight:800,color:"var(--amber)",letterSpacing:".04em"}}>{zh?"⚡ 负GEX · 趋势模式":"⚡ Negative GEX · Trend"}</span>
-              <span style={{fontSize:10,color:"var(--t2)"}}>{zh?"偏顺势 · 等破位":"Trend bias · wait break"}</span>
+              <span style={{fontSize:15,fontWeight:800,color:"var(--amber)",letterSpacing:".04em"}}>{zh?"⚡ 负GEX · 趋势模式":"⚡ Negative GEX · Trend"}</span>
+              <span style={{fontSize:11,color:"var(--t2)"}}>{zh?"偏顺势 · 等破位":"Trend bias · wait break"}</span>
             </div>
           }
         </div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6}}>
           {[["Gamma Flip",gex.flip,"var(--teal)"],["Call Wall",gex.call,"var(--red)"],["Put Wall",gex.put,"var(--green)"],["Vol Trigger",gex.vol,"var(--amber)"]].map(([n,v,c])=>(
             <div key={n} style={{background:"var(--bg3)",border:`1px solid ${v?cm(c,0.3):"var(--bd)"}`,borderRadius:6,padding:"10px 12px"}}>
-              <div style={{fontSize:8,letterSpacing:".1em",color:"var(--t3)",fontWeight:700,textTransform:"uppercase",marginBottom:5}}>{n}</div>
-              <div style={{fontSize:20,fontWeight:800,fontFamily:"monospace",letterSpacing:"-.01em",color:v?c:"var(--bg4)",lineHeight:1}}>{v?"$"+v:"—"}</div>
+              <div style={{fontSize:10,letterSpacing:".1em",color:"var(--t3)",fontWeight:700,textTransform:"uppercase",marginBottom:6}}>{n}</div>
+              <div style={{fontSize:24,fontWeight:800,fontFamily:"monospace",letterSpacing:"-.01em",color:v?c:"var(--bg4)",lineHeight:1}}>{v?"$"+v:"—"}</div>
             </div>
           ))}
         </div>
@@ -653,22 +665,22 @@ function GEXPanel({zh,gex,onSave,isToday}){
       <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:6,marginBottom:8}}>
         {[{s:"positive",label:zh?"正 GEX · 震荡模式":"Positive GEX · Range",sub:zh?"偏区间 · 少追突破 · 等回踩":"Range bias · avoid chasing · wait pullback",c:"var(--blue)"},{s:"negative",label:zh?"负 GEX · 趋势模式":"Negative GEX · Trend",sub:zh?"偏顺势 · 等破位 · VWAP第一参考":"Trend bias · wait break · VWAP = regime line",c:"var(--amber)"}].map(b=>(
           <button key={b.s} onClick={()=>setG(b.s)} style={{border:`1px solid ${local.state===b.s?b.c+"88":"var(--bd2)"}`,borderRadius:7,padding:"11px 13px",background:local.state===b.s?cm(b.c,0.12):"var(--bg3)",textAlign:"left",cursor:"pointer",fontFamily:"inherit"}}>
-            <div style={{fontSize:11,fontWeight:800,textTransform:"uppercase",letterSpacing:".08em",color:b.c,marginBottom:3}}>{b.label}</div>
-            <div style={{fontSize:10,color:"var(--t2)"}}>{b.sub}</div>
+            <div style={{fontSize:13,fontWeight:800,textTransform:"uppercase",letterSpacing:".08em",color:b.c,marginBottom:4}}>{b.label}</div>
+            <div style={{fontSize:11,color:"var(--t2)"}}>{b.sub}</div>
           </button>
         ))}
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6,marginBottom:8}}>
         {[{k:"flip",n:"Gamma Flip",h:zh?"正负切换位":"Regime flip",p:"480.00",c:"var(--teal)"},{k:"call",n:"Call Wall",h:zh?"上方压力":"Overhead",p:"490.00",c:"var(--red)"},{k:"put",n:"Put Wall",h:zh?"下方支撑":"Support",p:"470.00",c:"var(--green)"},{k:"vol",n:"Vol Trigger",h:zh?"波动启动":"Vol expand",p:"475.00",c:"var(--amber)"}].map(f=>(
           <div key={f.k} style={{background:"var(--bg3)",border:"1px solid var(--bd)",borderRadius:6,padding:"10px 12px"}}>
-            <div style={{fontSize:8,letterSpacing:".1em",color:"var(--t3)",fontWeight:700,textTransform:"uppercase",marginBottom:4}}>{f.n}</div>
-            <input value={local[f.k]} onChange={e=>setLocal(l=>({...l,[f.k]:e.target.value}))} placeholder={f.p} inputMode="decimal" style={{background:"transparent",border:"none",color:f.c,fontSize:20,fontWeight:800,fontFamily:"monospace",width:"100%",outline:"none",letterSpacing:"-.01em"}}/>
-            <div style={{fontSize:9,color:"var(--t3)",marginTop:2}}>{f.h}</div>
+            <div style={{fontSize:10,letterSpacing:".1em",color:"var(--t3)",fontWeight:700,textTransform:"uppercase",marginBottom:5}}>{f.n}</div>
+            <input value={local[f.k]} onChange={e=>setLocal(l=>({...l,[f.k]:e.target.value}))} placeholder={f.p} inputMode="decimal" style={{background:"transparent",border:"none",color:f.c,fontSize:24,fontWeight:800,fontFamily:"monospace",width:"100%",outline:"none",letterSpacing:"-.01em"}}/>
+            <div style={{fontSize:10,color:"var(--t3)",marginTop:3}}>{f.h}</div>
           </div>
         ))}
       </div>
       <div style={{display:"flex",justifyContent:"flex-end"}}>
-        <button onClick={handleSave} style={{background:"var(--teal)",border:"none",color:"var(--bg)",borderRadius:5,padding:"6px 20px",fontSize:11,fontWeight:800,cursor:"pointer",fontFamily:"inherit",letterSpacing:".08em"}}>{zh?"保存设置":"Save Setup"}</button>
+        <button onClick={handleSave} style={{background:"var(--teal)",border:"none",color:"var(--bg)",borderRadius:6,padding:"8px 24px",fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit",letterSpacing:".08em"}}>{zh?"保存设置":"Save Setup"}</button>
       </div>
     </div>
   );
@@ -721,18 +733,18 @@ export default function App(){
       `}</style>
 
       {/* ─── HEADER ─── */}
-      <div style={{borderBottom:"2px solid var(--teal)",padding:"10px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap",background:"var(--bg)"}}>
+      <div style={{borderBottom:"2px solid var(--teal)",padding:"12px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap",background:"var(--bg)"}}>
         <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
-          <div style={{fontSize:15,fontWeight:800,letterSpacing:".18em",color:"var(--teal)"}}>SEA TRADING OS</div>
+          <div style={{fontSize:16,fontWeight:800,letterSpacing:".2em",color:"var(--teal)"}}>SEA TRADING OS</div>
           <span style={{padding:"3px 10px",borderRadius:20,fontSize:10,fontWeight:800,letterSpacing:".1em",textTransform:"uppercase",border:`1px solid ${cm(badgeColor,0.4)}`,background:cm(badgeColor,0.16),color:badgeColor}}>{gexBadge.txt}</span>
           {vix&&<VixBadge vix={vix}/>}
           <div style={{display:"flex",alignItems:"center",gap:5}}>
-            <div style={{width:7,height:7,borderRadius:"50%",background:status==="live"?"var(--green)":"var(--amber)",animation:status==="live"?"blink 1.6s infinite":"none"}}/>
-            <span style={{fontSize:9,color:"var(--t3)",letterSpacing:".1em"}}>{status}</span>
+            <div style={{width:8,height:8,borderRadius:"50%",background:status==="live"?"var(--green)":"var(--amber)",animation:status==="live"?"blink 1.6s infinite":"none"}}/>
+            <span style={{fontSize:10,color:"var(--t3)",letterSpacing:".1em"}}>{status}</span>
           </div>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:7}}>
-          <div style={{fontSize:11,color:"var(--t2)",fontFamily:"monospace",letterSpacing:".06em",fontWeight:600}}>{clock}</div>
+          <div style={{fontSize:13,color:"var(--t2)",fontFamily:"monospace",letterSpacing:".06em",fontWeight:600}}>{clock}</div>
           <Ibtn onClick={toggleTheme}>{dark?"☀":"☾"}</Ibtn>
           <Ibtn onClick={toggleLang}>{zh?"EN":"中"}</Ibtn>
         </div>
@@ -752,16 +764,16 @@ export default function App(){
       <MacroBar macro={macro} zh={zh}/>
 
       {/* ─── TABS ─── */}
-      <div style={{display:"flex",gap:2,padding:"9px 16px 0",borderBottom:"1px solid var(--bd)",background:"var(--bg)"}}>
+      <div style={{display:"flex",gap:2,padding:"10px 20px 0",borderBottom:"1px solid var(--bd)",background:"var(--bg)"}}>
         {TABS.map((tb,i)=>(
-          <button key={tb.id} onClick={()=>setTab(i)} style={{padding:"7px 15px",borderRadius:"7px 7px 0 0",fontSize:12,fontWeight:700,cursor:"pointer",border:`1px solid ${tab===i?"var(--bd)":"transparent"}`,borderBottom:tab===i?`2px solid ${tb.color}`:"1px solid transparent",background:tab===i?"var(--bg2)":"transparent",color:tab===i?tb.color:"var(--t3)",fontFamily:"inherit",letterSpacing:".06em",marginBottom:tab===i?-1:0}}>
+          <button key={tb.id} onClick={()=>setTab(i)} style={{padding:"8px 18px",borderRadius:"7px 7px 0 0",fontSize:13,fontWeight:700,cursor:"pointer",border:`1px solid ${tab===i?"var(--bd)":"transparent"}`,borderBottom:tab===i?`2px solid ${tb.color}`:"1px solid transparent",background:tab===i?"var(--bg2)":"transparent",color:tab===i?tb.color:"var(--t3)",fontFamily:"inherit",letterSpacing:".04em",marginBottom:tab===i?-1:0}}>
             {zh?tb.labelZh:tb.labelEn}
           </button>
         ))}
       </div>
 
       {/* ─── CONTENT ─── */}
-      <div style={{background:"var(--bg2)",padding:"10px 14px",display:"flex",flexDirection:"column",gap:8}}>
+      <div style={{background:"var(--bg2)",padding:"14px 20px",display:"flex",flexDirection:"column",gap:12}}>
 
         {/* === QQQ Options === */}
         {tab===0&&<>
@@ -788,7 +800,7 @@ export default function App(){
         {tab===1&&<>
           <div>
             <SL>{t("美股正股 · 低频配置系统","US Equities · Low-Frequency System")}</SL>
-            <div style={{background:"rgba(167,139,250,0.08)",border:"1px solid rgba(167,139,250,0.3)",borderRadius:7,padding:"10px 13px",fontSize:11,color:"var(--t2)",lineHeight:1.65,marginBottom:9}}>
+            <div style={{background:"rgba(167,139,250,0.08)",border:"1px solid rgba(167,139,250,0.3)",borderRadius:7,padding:"10px 13px",fontSize:12,color:"var(--t2)",lineHeight:1.65,marginBottom:9}}>
               {t("底仓系统，非当前主战场。先筛公司质量，再等技术位置，低频持有。不做日内，不追热点。","Foundation system — not the primary battleground. Screen quality first, wait for technical levels, hold low-frequency. No intraday, no hype-chasing.")}
             </div>
             <StepRail color="var(--violet)" steps={[{n:t("第一步","Step 1"),t:t("基本面筛选","Fundamental Screen"),d:t("营收/利润连续增长 · 行业景气 · 无重大负面","Consistent revenue/profit growth · positive sector · no major negatives")},{n:t("第二步","Step 2"),t:t("技术择时","Technical Timing"),d:t("周线趋势不坏 · 关键支撑 · 突破回踩日线确认","Weekly trend intact · key support · breakout pullback + daily confirm")},{n:t("第三步","Step 3"),t:t("持仓管理","Position Management"),d:t("周线级别持有 · 结构下方止损 · 不摊平下跌","Weekly timeframe hold · stop below structure · never average down")}]}/>
@@ -798,9 +810,9 @@ export default function App(){
             <SL>{t("VIX 宏观过滤","VIX Macro Filter")}</SL>
             <div style={{display:"flex",gap:6}}>
               {[{r:t("VIX<15","VIX<15"),n:t("低波·低成本·正常参与","Low vol·low cost·normal"),c:"var(--green)",a:vix&&vix<15},{r:t("15–25","15–25"),n:t("正常执行，全力参与","Normal — full participation"),c:"var(--blue)",a:vix&&vix>=15&&vix<25},{r:t("25–35","25–35"),n:t("降低仓位，提高目标","Reduce size · raise targets"),c:"var(--amber)",a:vix&&vix>=25&&vix<35},{r:t(">35 跳过",">35 skip"),n:t("方向混沌，不参与","Direction chaotic — stay out"),c:"var(--red)",a:vix&&vix>=35}].map(z=>(
-                <div key={z.r} style={{flex:1,borderRadius:6,border:`1px solid ${z.a?cm(z.c,0.4):"var(--bd)"}`,padding:"8px 10px",background:z.a?cm(z.c,0.10):"var(--bg3)",opacity:z.a?1:.5,transition:"all .2s"}}>
-                  <div style={{fontSize:11,fontWeight:800,color:z.c,marginBottom:3}}>{z.r}</div>
-                  <div style={{fontSize:10,color:"var(--t2)",lineHeight:1.4}}>{z.n}</div>
+                <div key={z.r} style={{flex:1,borderRadius:6,border:`1px solid ${z.a?cm(z.c,0.4):"var(--bd)"}`,padding:"10px 12px",background:z.a?cm(z.c,0.10):"var(--bg3)",opacity:z.a?1:.5,transition:"all .2s"}}>
+                  <div style={{fontSize:13,fontWeight:800,color:z.c,marginBottom:4}}>{z.r}</div>
+                  <div style={{fontSize:11,color:"var(--t2)",lineHeight:1.45}}>{z.n}</div>
                 </div>
               ))}
             </div>
@@ -833,19 +845,19 @@ export default function App(){
                   const rgb={green:"52,211,153",blue:"96,165,250",slate:"255,255,255",amber:"251,191,36",red:"248,113,113"}[item.c];
                   const levelColor={green:"var(--green)",blue:"var(--blue)",slate:"var(--t3)",amber:"var(--amber)",red:"var(--red)"}[item.c];
                   return(
-                    <div key={i} style={{padding:"8px 10px",borderRadius:6,border:`1px solid rgba(${rgb},${bgAlpha>0?0.25:0.08})`,background:`rgba(${rgb},${bgAlpha})`,display:"flex",flexDirection:"column",gap:4}}>
+                    <div style={{padding:"10px 12px",borderRadius:6,border:`1px solid rgba(${rgb},${bgAlpha>0?0.25:0.08})`,background:`rgba(${rgb},${bgAlpha})`,display:"flex",flexDirection:"column",gap:5}}>
                       {/* Row 1: level badge + condition */}
-                      <div style={{display:"flex",alignItems:"center",gap:7}}>
-                        <span style={{fontSize:9,fontWeight:800,letterSpacing:".1em",padding:"1px 6px",borderRadius:3,border:`1px solid rgba(${rgb},0.4)`,color:levelColor,flexShrink:0,lineHeight:1.6}}>{item.level}</span>
-                        <span style={{fontSize:12,fontWeight:800,color:col,letterSpacing:".02em"}}>{item.s}</span>
+                      <div style={{display:"flex",alignItems:"center",gap:8}}>
+                        <span style={{fontSize:10,fontWeight:800,letterSpacing:".1em",padding:"2px 7px",borderRadius:3,border:`1px solid rgba(${rgb},0.4)`,color:levelColor,flexShrink:0,lineHeight:1.6}}>{item.level}</span>
+                        <span style={{fontSize:13,fontWeight:800,color:col,letterSpacing:".02em"}}>{item.s}</span>
                       </div>
                       {/* Row 2: mechanism */}
-                      <div style={{fontSize:10,color:"var(--t2)",lineHeight:1.5,paddingLeft:2}}>
-                        <span style={{color:"var(--t3)",fontSize:9,marginRight:4}}>{zh?"原因：":"Why:"}</span>{item.why}
+                      <div style={{fontSize:11,color:"var(--t2)",lineHeight:1.55,paddingLeft:2}}>
+                        <span style={{color:"var(--t3)",fontSize:10,marginRight:4}}>{zh?"原因：":"Why:"}</span>{item.why}
                       </div>
                       {/* Row 3: action */}
-                      <div style={{fontSize:10,fontWeight:700,color:col,paddingLeft:2,borderTop:"1px solid var(--bd)",paddingTop:3,marginTop:1}}>
-                        {zh?"→ ":"→ "}{item.a}
+                      <div style={{fontSize:11,fontWeight:700,color:col,paddingLeft:2,borderTop:"1px solid var(--bd)",paddingTop:4,marginTop:1}}>
+                        {"→ "}{item.a}
                       </div>
                     </div>
                   );
@@ -869,7 +881,7 @@ export default function App(){
         {tab===3&&<>
           <div>
             <SL>{t("EUR/USD · 趋势跟踪系统","EUR/USD · Trend-Following System")}</SL>
-            <div style={{background:"rgba(96,165,250,0.08)",border:"1px solid rgba(96,165,250,0.3)",borderRadius:7,padding:"10px 13px",fontSize:11,color:"var(--t2)",lineHeight:1.65,marginBottom:9}}>
+            <div style={{background:"rgba(96,165,250,0.08)",border:"1px solid rgba(96,165,250,0.3)",borderRadius:7,padding:"10px 13px",fontSize:12,color:"var(--t2)",lineHeight:1.65,marginBottom:9}}>
               {t("EMA顺排 + ADX>25确认趋势环境 → Kill Zone回踩结构位等确认 → 只拿中间段。ADX<20 + 均线缠绕时系统无效，不做。","EMA aligned + ADX>25 confirms trend → Kill Zone pullback to structure for entry → take middle leg only. ADX<20 + tangled EMAs = system invalid.")}
             </div>
             <StepRail color="var(--blue)" steps={[{n:"Step 1",t:t("趋势过滤","Trend Filter"),d:t("EMA 9/21/55顺排 + ADX>25，先确认趋势环境","EMA 9/21/55 aligned + ADX>25 — confirm trend first")},{n:"Step 2",t:"Kill Zone",d:t("伦敦/纽约开盘窗口，扫前高低点后定方向","London/NY open — sweep prior levels then set direction")},{n:"Step 3",t:t("找回踩位","Find Pullback"),d:t("回踩EMA21或关键结构位，等拒绝K线确认","Pullback to EMA21 or key structure, wait for rejection candle")},{n:"Step 4",t:t("执行","Execute"),d:t("RR≥1:2 · 到1:1.5先锁一半 · 不追第一根破位","RR ≥ 1:2 · lock 50% at 1:1.5 · never chase the first breakout candle")}]}/>
@@ -889,7 +901,7 @@ export default function App(){
         </>}
 
         <div style={{textAlign:"center",paddingTop:6}}>
-          <div style={{fontSize:9,color:"var(--t3)",letterSpacing:".15em"}}>SEA TRADING OS v7.6.4 · MACRO MATRIX · OPEX+WITCHING+TREASURY · 弱水三千，只取一瓢 · 先活下来，再赚钱</div>
+          <div style={{fontSize:10,color:"var(--t3)",letterSpacing:".15em"}}>SEA TRADING OS v7.6.0 · OPEX+Witching+Treasury · 弱水三千，只取一瓢 · 先活下来，再赚钱</div>
         </div>
       </div>
     </ThemeProvider>

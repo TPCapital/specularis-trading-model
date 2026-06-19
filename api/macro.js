@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Sea Trading OS v7.6.3 — Macro API
+// Sea Trading OS v7.6.0 — Macro API
 // Returns: yields (5Y/10Y/30Y), economic calendar events, OPEX/witching,
 //          Treasury auction days — all for the current ET trading day.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -123,7 +123,7 @@ function fetchWithTimeout(url, options = {}, timeoutMs = 3500) {
 async function fetchYield(symbol) {
   try {
     const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=2d`;
-    const r = await fetchWithTimeout(url, { headers: { "User-Agent": "Mozilla/5.0 Sea-Trading-OS/7.6.3", "Accept": "application/json" } });
+    const r = await fetchWithTimeout(url, { headers: { "User-Agent": "Mozilla/5.0 Sea-Trading-OS/7.6.0", "Accept": "application/json" } });
     if (!r.ok) return null;
     const d = await r.json();
     const meta = d?.chart?.result?.[0]?.meta;
@@ -175,7 +175,7 @@ export default async function handler(req, res) {
     dayRisk,
     yields,
     source: "yahoo-chart+static-calendar",
-    build: "v7.6.3",
+    build: "v7.6.0",
     ts: Date.now()
   });
 }

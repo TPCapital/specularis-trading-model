@@ -1,25 +1,36 @@
-# Sea Trading OS v7.6.3 - Clean Vercel Deploy Fix
+# Sea Trading OS v7.5.2 - Vercel Clean Deploy
 
-This package fixes the stale-version deployment problem.
+This package fixes deployment-stuck issues by removing the risky parts that can keep Vercel in `Building` or deploy stale output.
 
-## What was wrong
+## What changed
 
-- The uploaded v7_6_3 zip still contained old legacy build markers in `package.json`, `package-lock.json`, `vercel.json`, and `/api/quote.js`.
-- The UI contained previous build markers while the deployment headers still said legacy build.
-- The zip had a nested `sea-trading-os/` folder instead of a flat project root.
+1. Removed unnecessary `/api/:path* -> /api/:path*` self-rewrite.
+2. Removed stale build markers from `index.html`, `App.jsx`, and response headers.
+3. Converted API files from Edge runtime to conventional Vercel Node serverless handlers.
+4. Added `.gitignore` and `.vercelignore` to prevent `node_modules`, `dist`, `.vercel`, old zip files, logs, and cache folders from being uploaded/deployed.
+5. Kept root flat: `package.json`, `vercel.json`, `src/`, `api/`, and `index.html` must be directly in the GitHub repository root.
 
-## Fixed
+## Vercel settings
 
-- Unified all build markers to `v7.6.3-macro-matrix`.
-- Added `public/deploy-version.json` as an external deployment verification file.
-- Added no-store headers for `/`, `/index.html`, and `/api/*`.
-- Preserved immutable caching only for hashed Vite assets under `/assets/*`.
-- Output zip is flat-root: `package.json`, `vercel.json`, `src/`, `api/`, and `index.html` are at the first level.
+Use these exact settings:
 
-## Verification URL after deployment
+- Framework Preset: Vite
+- Root Directory: leave empty / repository root
+- Install Command: `npm ci --no-audit --no-fund --progress=false`
+- Build Command: `npm run build`
+- Output Directory: `dist`
+- Node.js Version: 20.x or 22.x
 
-Open this file on your Vercel domain:
+## Important cleanup before upload
 
-`/deploy-version.json`
+Delete these from GitHub if they exist:
 
-It must show `v7.6.3-macro-matrix`. If not, Vercel is deploying the wrong GitHub root/branch or an old commit.
+- old nested folder: `sea-trading-os/`
+- `node_modules/`
+- `dist/`
+- `.vercel/`
+- old `.zip` packages
+- duplicated old `package.json` in subfolders
+- old generated assets not used by the app
+
+If Vercel is still stuck after replacing the files, cancel the stuck deployment, then trigger a fresh deployment with **Redeploy without Build Cache**.
