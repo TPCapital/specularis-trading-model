@@ -2,7 +2,8 @@
 // Sea Trading OS v7.7.0 — GEX Auto-Fetch API
 // Proxies FlashAlpha /v1/exposure/levels/QQQ (Basic+) or NVDA (Free tier test)
 // Returns normalised GEX key levels for QQQ options panel.
-// Env var: FLASHALPHA_KEY (set in Vercel Environment Variables)
+// Env var: flashalpha (set in Vercel Environment Variables)
+// Fallback also checks FLASHALPHA_KEY for compatibility
 // ─────────────────────────────────────────────────────────────────────────────
 
 const BASE = "https://lab.flashalpha.com";
@@ -37,11 +38,12 @@ async function fetchLevels(symbol, apiKey) {
 export default async function handler(req, res) {
   if (req.method === "OPTIONS") return send(res, { ok: true });
 
-  const apiKey = process.env.FLASHALPHA_KEY;
+  // Support both "flashalpha" (as set in Vercel dashboard) and "FLASHALPHA_KEY"
+  const apiKey = process.env.flashalpha || process.env.FLASHALPHA_KEY;
   if (!apiKey) {
     return send(res, {
       ok: false,
-      error: "FLASHALPHA_KEY not configured",
+      error: "API key not configured — add 'flashalpha' to Vercel Environment Variables",
       tier: "none"
     }, 500);
   }
